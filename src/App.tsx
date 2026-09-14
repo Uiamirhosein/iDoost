@@ -82,6 +82,7 @@ export default function App() {
   const [activeChatMessages, setActiveChatMessages] = useState<ChatMessage[]>([]);
   const [activeChatConnectedAt, setActiveChatConnectedAt] = useState<number | null>(null);
   const [isChatMinimized, setIsChatMinimized] = useState<boolean>(false);
+  const [isChatClosedByPartner, setIsChatClosedByPartner] = useState<boolean>(false);
 
   // Realtime subscription refs
   const matchQueueSubRef = useRef<(() => void) | null>(null);
@@ -370,8 +371,8 @@ export default function App() {
       // 4. Listen for session closure by partner
       chatStatusSubRef.current = subscribeToChatSessionStatus(sessionId, (closedBy) => {
         if (closedBy !== currentUser.id) {
+          setIsChatClosedByPartner(true);
           showAppToast(`کاربر «${foundUser.name}» به گفتگو پایان داد.`);
-          handleCloseChat('partner', activeChatMessages, 'مکالمه توسط طرف مقابل پایان یافت');
         }
       });
     } else {
@@ -542,6 +543,7 @@ export default function App() {
     setActiveChatMessages([]);
     setActiveChatConnectedAt(null);
     setIsChatMinimized(false);
+    setIsChatClosedByPartner(false);
     setActiveTab('history');
     showAppToast(
       `گفتگو با «${partnerName}» بسته شد و در بخش «تاریخچه چت‌ها» بایگانی گردید.`
@@ -707,6 +709,7 @@ export default function App() {
               initialMessages={activeChatMessages}
               connectedAt={activeChatConnectedAt || undefined}
               chatSessionId={activeChatSessionId || undefined}
+              isClosedByPartner={isChatClosedByPartner}
               onSendMessage={handleSendMessage}
               onMessagesChange={(msgs) => setActiveChatMessages(msgs)}
               onBack={() => setIsChatMinimized(true)}

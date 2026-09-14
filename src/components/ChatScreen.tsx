@@ -38,6 +38,7 @@ interface ChatScreenProps {
   initialMessages?: ChatMessage[];
   connectedAt?: number;
   chatSessionId?: string;
+  isClosedByPartner?: boolean;
   onMessagesChange?: (messages: ChatMessage[]) => void;
   onBack: () => void;
   onCloseChat?: (
@@ -61,6 +62,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   initialMessages = [],
   connectedAt,
   chatSessionId,
+  isClosedByPartner = false,
   onMessagesChange,
   onBack,
   onCloseChat,
@@ -106,7 +108,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const [chatSecondsElapsed, setChatSecondsElapsed] = useState<number>(() => calculateElapsed());
   const [showConfirmCloseModal, setShowConfirmCloseModal] = useState<boolean>(false);
-  const [showPartnerClosedModal, setShowPartnerClosedModal] = useState<boolean>(false);
+  const [showPartnerClosedModal, setShowPartnerClosedModal] = useState<boolean>(isClosedByPartner);
+
+  // Trigger partner-closed modal if prop updates in real-time
+  useEffect(() => {
+    if (isClosedByPartner) {
+      setShowPartnerClosedModal(true);
+    }
+  }, [isClosedByPartner]);
 
   useEffect(() => {
     setChatSecondsElapsed(calculateElapsed());
@@ -533,50 +542,69 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
       {/* 3. Input Footer */}
       <footer className="p-3 bg-[#10111a]/95 backdrop-blur-md border-t border-white/[0.08] shrink-0 z-20">
-        <form onSubmit={handleSend} className="flex items-center gap-2">
-          <div className="flex-1 relative flex items-center">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="پیامی بنویسید..."
-              className="w-full h-11 rounded-2xl bg-white/[0.05] border border-white/10 px-4 text-xs text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
-            />
-          </div>
-
-          <button
-            type="submit"
-            id="chat-send-btn"
-            title="ارسال پیام"
-            disabled={!inputText.trim()}
-            className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
-              inputText.trim()
-                ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md active:scale-95 hover:opacity-95'
-                : 'bg-white/[0.05] text-white/30 cursor-not-allowed'
-            }`}
-          >
-            <svg
-              className="w-5 h-5 text-current"
-              viewBox="0 0 123 123"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+        {isClosedByPartner ? (
+          <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+            <div className="flex items-center gap-2">
+              <DoorClosed className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>این گفتگو توسط طرف مقابل بسته شد.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingCloseRole('partner');
+                setShowFeedbackModal(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-bold transition-colors cursor-pointer"
             >
-              <g clipPath="url(#clip0_540_2995)">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M120.247 44.5801L5.2467 0.370049C4.5914 0.0447391 3.85309 -0.0749663 3.12856 0.0266263C2.40404 0.128219 1.72713 0.446368 1.18656 0.939363C0.645997 1.43236 0.267011 2.07719 0.0992966 2.78932C-0.068418 3.50144 -0.0170366 4.24763 0.246704 4.93005L44.2467 120.54C44.4985 121.205 44.94 121.781 45.5164 122.198C46.0929 122.614 46.7789 122.852 47.4893 122.882C48.1997 122.911 48.9032 122.732 49.5125 122.365C50.1218 121.999 50.6101 121.462 50.9167 120.82L68.6467 84.14L33.4567 33.7701L83.7267 68.86L120.517 51.2401C121.156 50.933 121.691 50.4457 122.056 49.8381C122.421 49.2306 122.6 48.5295 122.571 47.8213C122.543 47.1131 122.307 46.4288 121.894 45.8528C121.481 45.2768 120.908 44.8344 120.247 44.5801Z"
-                  fill="currentColor"
-                />
-              </g>
-              <defs>
-                <clipPath id="clip0_540_2995">
-                  <rect width="122.56" height="122.88" fill="white" />
-                </clipPath>
-              </defs>
-            </svg>
-          </button>
-        </form>
+              پایان و خروج
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSend} className="flex items-center gap-2">
+            <div className="flex-1 relative flex items-center">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="پیامی بنویسید..."
+                className="w-full h-11 rounded-2xl bg-white/[0.05] border border-white/10 px-4 text-xs text-white placeholder-white/40 focus:outline-none focus:border-purple-500 transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              id="chat-send-btn"
+              title="ارسال پیام"
+              disabled={!inputText.trim()}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
+                inputText.trim()
+                  ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md active:scale-95 hover:opacity-95'
+                  : 'bg-white/[0.05] text-white/30 cursor-not-allowed'
+              }`}
+            >
+              <svg
+                className="w-5 h-5 text-current"
+                viewBox="0 0 123 123"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g clipPath="url(#clip0_540_2995)">
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M120.247 44.5801L5.2467 0.370049C4.5914 0.0447391 3.85309 -0.0749663 3.12856 0.0266263C2.40404 0.128219 1.72713 0.446368 1.18656 0.939363C0.645997 1.43236 0.267011 2.07719 0.0992966 2.78932C-0.068418 3.50144 -0.0170366 4.24763 0.246704 4.93005L44.2467 120.54C44.4985 121.205 44.94 121.781 45.5164 122.198C46.0929 122.614 46.7789 122.852 47.4893 122.882C48.1997 122.911 48.9032 122.732 49.5125 122.365C50.1218 121.999 50.6101 121.462 50.9167 120.82L68.6467 84.14L33.4567 33.7701L83.7267 68.86L120.517 51.2401C121.156 50.933 121.691 50.4457 122.056 49.8381C122.421 49.2306 122.6 48.5295 122.571 47.8213C122.543 47.1131 122.307 46.4288 121.894 45.8528C121.481 45.2768 120.908 44.8344 120.247 44.5801Z"
+                    fill="currentColor"
+                  />
+                </g>
+                <defs>
+                  <clipPath id="clip0_540_2995">
+                    <rect width="122.56" height="122.88" fill="white" />
+                  </clipPath>
+                </defs>
+              </svg>
+            </button>
+          </form>
+        )}
       </footer>
 
       {/* 4. Rich Profile Drawer Modal */}
