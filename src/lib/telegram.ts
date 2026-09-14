@@ -151,34 +151,65 @@ export function isRealTelegramClient(): boolean {
 }
 
 /**
- * Extracts referral start parameter passed to the Telegram Mini App (e.g. ?startapp=ref_123456)
+ * Extracts referral start parameter passed to the Telegram Mini App
  */
 export function getTelegramReferrerId(): number | null {
   if (typeof window === 'undefined') return null;
 
-  // 1. Direct Telegram initDataUnsafe start_param
-  const startParam = (window.Telegram?.WebApp?.initDataUnsafe as any)?.start_param;
-  if (startParam && typeof startParam === 'string' && startParam.startsWith('ref_')) {
-    const parsed = parseInt(startParam.replace('ref_', ''), 10);
-    if (!isNaN(parsed) && parsed > 0) return parsed;
-  }
+  try {
+    // 1. Direct Telegram initDataUnsafe start_param (When launched via /app?startapp=ref_123 or direct link)
+    const startParam = (window.Telegram?.WebApp?.initDataUnsafe as any)?.start_param;
+    if (startParam && typeof startParam === 'string') {
+      const match = startParam.match(/(\d+)/);
+      if (match && match[1]) {
+        const id = parseInt(match[1], 10);
+        if (id > 0) return id;
+      }
+    }
 
-  // 2. URL parameters (?startapp=ref_123456 or ?ref=123456 or tgWebAppStartParam)
-  const urlParams = new URLSearchParams(window.location.search);
-  const param = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam') || urlParams.get('ref');
-  if (param) {
-    const clean = param.replace('ref_', '');
-    const parsed = parseInt(clean, 10);
-    if (!isNaN(parsed) && parsed > 0) return parsed;
+    // 2. URL parameters (?startapp=ref_123 or ?ref=123 or ?tgWebAppStartParam=ref_123)
+    const urlParams = new URLSearchParams(window.location.search);
+    const rawParam =
+      urlParams.get('startapp') ||
+      urlParams.get('tgWebAppStartParam') ||
+      urlParams.get('ref') ||
+      urlParams.get('start');
+
+    if (rawParam) {
+      const match = rawParam.match(/(\d+)/);
+      if (match && match[1]) {
+        const id = parseInt(match[1], 10);
+        if (id > 0) return id;
+      }
+    }
+
+    // 3. Check hash parameter (e.g. #tgWebAppData=...&tgWebAppStartParam=ref_123)
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const hashParam =
+        hashParams.get('tgWebAppStartParam') ||
+        hashParams.get('startapp') ||
+        hashParams.get('ref');
+
+      if (hashParam) {
+        const match = hashParam.match(/(\d+)/);
+        if (match && match[1]) {
+          const id = parseInt(match[1], 10);
+          if (id > 0) return id;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error parsing referrer ID:', err);
   }
 
   return null;
 }
 
 /**
- * Generates personalized Telegram share & invitation link
+ * Generates both direct Mini App link and Bot /start link for Telegram
  */
 export function getReferralInviteLink(telegramId: number): string {
-  const botUsername = 'iDoostBot';
-  return `https://t.me/${botUsername}?start=ref_${telegramId}`;
+  // Short direct link opening the WebApp directly with the referral parameter
+  return `https://t.me/iDoostBot/app?startapp=ref_${telegramId}`;
 }

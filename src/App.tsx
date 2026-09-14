@@ -118,11 +118,18 @@ export default function App() {
           // Process affiliate referral if newcomer entered via a referral link
           const referrerId = getTelegramReferrerId();
           if (referrerId && referrerId !== currentTgUser.id) {
-            processReferralAttribution(currentTgUser.id, referrerId).then((res) => {
-              if (res.success) {
-                showAppToast('لینک دعوت با موفقیت ثبت شد! به آی‌دوست خوش آمدید ✨');
-              }
-            });
+            const alreadyProcessedKey = `idoost_referred_by_${currentTgUser.id}`;
+            const hasSentRef = localStorage.getItem(alreadyProcessedKey);
+
+            if (!hasSentRef) {
+              processReferralAttribution(currentTgUser.id, referrerId).then((res) => {
+                if (res.success) {
+                  localStorage.setItem(alreadyProcessedKey, referrerId.toString());
+                  const name = res.referrerName || 'یکی از دوستانتان';
+                  showAppToast(`🎉 تبریک! شما از طرف «${name}» به آی‌دوست دعوت شدید.`);
+                }
+              });
+            }
           }
 
           // Restore ongoing active chat session if user closed mini app while chatting

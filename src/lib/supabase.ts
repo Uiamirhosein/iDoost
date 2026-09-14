@@ -500,7 +500,7 @@ export async function closeChatSession(
 export async function processReferralAttribution(
   newTelegramId: number,
   referrerTelegramId: number
-): Promise<{ success: boolean; proUnlocked?: boolean }> {
+): Promise<{ success: boolean; referrerName?: string; proUnlocked?: boolean }> {
   try {
     const { data, error } = await supabase.rpc('process_referral', {
       p_new_telegram_id: newTelegramId,
@@ -508,11 +508,13 @@ export async function processReferralAttribution(
     });
 
     if (error || !data) {
+      console.error('Failed to process referral RPC:', error);
       return { success: false };
     }
 
     return {
       success: !!data.success,
+      referrerName: data.referrer_name,
       proUnlocked: !!data.referrer_pro_unlocked,
     };
   } catch (err) {

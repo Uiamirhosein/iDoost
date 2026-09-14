@@ -71,15 +71,23 @@ async function startPolling() {
           const userFirst = msg.from?.first_name || 'کاربر گرامی';
 
           if (msg.text.startsWith('/start')) {
+            // Extract referral parameter from /start ref_123456
+            const parts = msg.text.split(' ');
+            let webAppUrl = WEBAPP_URL;
+            if (parts.length > 1 && parts[1].startsWith('ref_')) {
+              const refParam = parts[1];
+              webAppUrl += (webAppUrl.includes('?') ? '&' : '?') + `startapp=${refParam}`;
+            }
+
             await callTelegram('sendMessage', {
               chat_id: chatId,
-              text: `سلام ${userFirst} عزیز! 👋\n\nبه مینی‌اپ همدم خوش آمدید.\nبرای جستجوی هم‌صحبت آنلاین و چت آنی، دکمه زیر را لمس کنید:`,
+              text: `سلام ${userFirst} عزیز! 👋\n\nبه مینی‌اپ آی‌دوست خوش آمدید.\nبرای جستجوی هم‌صحبت آنلاین و چت آنی، دکمه زیر را لمس کنید:`,
               reply_markup: {
                 inline_keyboard: [
                   [
                     {
-                      text: ' ورود به همدم (Mini App) ✨',
-                      web_app: { url: WEBAPP_URL },
+                      text: ' ورود به آی‌دوست (Mini App) ✨',
+                      web_app: { url: webAppUrl },
                     },
                   ],
                 ],
