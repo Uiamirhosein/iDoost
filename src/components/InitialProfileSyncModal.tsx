@@ -46,23 +46,23 @@ export const InitialProfileSyncModal: React.FC<InitialProfileSyncModalProps> = (
     setStep3Status('pending');
     setIsFinished(false);
 
-    // Step 1 finishes -> Step 2 starts
+    // Sequence the steps quickly
     const timer1 = setTimeout(() => {
       setStep1Status('completed');
       setStep2Status('loading');
-    }, 1200);
+    }, 400);
 
     // Step 2 finishes -> Step 3 starts
     const timer2 = setTimeout(() => {
       setStep2Status('completed');
       setStep3Status('loading');
-    }, 2400);
+    }, 800);
 
     // Step 3 finishes -> Show final celebration and prompt
     const timer3 = setTimeout(() => {
       setStep3Status('completed');
       setIsFinished(true);
-    }, 3500);
+    }, 1200);
 
     return () => {
       clearTimeout(timer1);
