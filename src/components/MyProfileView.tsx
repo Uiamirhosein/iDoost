@@ -34,7 +34,6 @@ interface MyProfileViewProps {
   onUnblockUser?: (userId: string) => void;
   autoOpenWizard?: boolean;
   onWizardComplete?: (updated: UserProfile) => void;
-  onReplayInitialSync?: () => void;
   gamification?: GamificationState;
   onOpenGamification?: () => void;
 }
@@ -51,7 +50,6 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
   onUnblockUser = () => {},
   autoOpenWizard = false,
   onWizardComplete,
-  onReplayInitialSync,
   gamification,
   onOpenGamification,
 }) => {
@@ -132,18 +130,6 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {onReplayInitialSync && (
-            <button
-              type="button"
-              onClick={onReplayInitialSync}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-bold transition-all active:scale-95"
-              title="مشاهده مجدد انیمیشن استپ‌بار ساخت پروفایل تلگرام"
-            >
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              <span>مراحل ورود</span>
-            </button>
-          )}
-
           <button
             type="button"
             onClick={onOpenPaywall}

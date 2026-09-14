@@ -798,7 +798,6 @@ export default function App() {
                   onUnblockUser={handleUnblockUser}
                   autoOpenWizard={autoOpenProfileWizard}
                   onWizardComplete={handleProfileWizardCompleted}
-                  onReplayInitialSync={() => setShowInitialSyncModal(true)}
                   gamification={gamification}
                   onOpenGamification={() => setIsPerksModalOpen(true)}
                 />
