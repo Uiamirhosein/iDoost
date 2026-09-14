@@ -120,54 +120,24 @@ DECLARE
   v_peer_queue RECORD;
   v_new_session RECORD;
   v_current_queue RECORD;
-  v_active_session RECORD;
   v_partner RECORD;
 BEGIN
-  -- 1. Check if user is already in an active chat session
-  SELECT * INTO v_active_session
-  FROM public.chat_sessions
+  -- 1. Auto-close any old or abandoned sessions for this user so they don't reconnect to ghost chats
+  UPDATE public.chat_sessions
+  SET status = 'closed', ended_at = now()
   WHERE status = 'active'
-    AND (user1_id = p_user_id OR user2_id = p_user_id)
-  ORDER BY created_at DESC
-  LIMIT 1;
+    AND (user1_id = p_user_id OR user2_id = p_user_id);
 
-  IF FOUND THEN
-    SELECT * INTO v_partner
-    FROM public.users
-    WHERE id = CASE WHEN v_active_session.user1_id = p_user_id THEN v_active_session.user2_id ELSE v_active_session.user1_id END;
-
-    -- Ensure queue has matched record
-    DELETE FROM public.match_queue WHERE user_id = p_user_id;
-
-    RETURN jsonb_build_object(
-      'status', 'matched',
-      'chat_session_id', v_active_session.id,
-      'partner', to_jsonb(v_partner),
-      'already_active', true
-    );
-  END IF;
-
-  -- 2. Check if user already has an entry in match_queue that got matched
-  SELECT * INTO v_current_queue
-  FROM public.match_queue
-  WHERE user_id = p_user_id AND status = 'matched' AND matched_chat_id IS NOT NULL
-  ORDER BY created_at DESC
-  LIMIT 1;
-
-  IF FOUND THEN
-    SELECT * INTO v_partner FROM public.users WHERE id = v_current_queue.matched_with_user_id;
-    RETURN jsonb_build_object(
-      'status', 'matched',
-      'chat_session_id', v_current_queue.matched_chat_id,
-      'partner', to_jsonb(v_partner)
-    );
-  END IF;
-
-  -- 3. Clear any stale waiting entries for this user
+  -- 2. Clear all previous queue rows for this user
   DELETE FROM public.match_queue
   WHERE user_id = p_user_id;
 
-  -- 4. Try to lock an available peer using FOR UPDATE SKIP LOCKED
+  -- 3. Also purge any stale queue entries older than 2 minutes (users who closed browser/app without cancelling)
+  DELETE FROM public.match_queue
+  WHERE status = 'waiting'
+    AND created_at < now() - INTERVAL '2 minutes';
+
+  -- 4. ATOMIC PEER LOCK: Find someone who is EXPLICITLY waiting in match_queue right now!
   SELECT * INTO v_peer_queue
   FROM public.match_queue
   WHERE status = 'waiting'
@@ -177,12 +147,12 @@ BEGIN
   FOR UPDATE SKIP LOCKED;
 
   IF FOUND THEN
-    -- Match found! Create active chat session
+    -- A real user is actively waiting in the queue! Create active chat session
     INSERT INTO public.chat_sessions (user1_id, user2_id, status)
     VALUES (v_peer_queue.user_id, p_user_id, 'active')
     RETURNING * INTO v_new_session;
 
-    -- Update peer's queue entry so their Realtime subscription notifies them
+    -- Update peer's queue entry so their Realtime subscription and polling notify them
     UPDATE public.match_queue
     SET status = 'matched',
         matched_chat_id = v_new_session.id,
@@ -217,7 +187,7 @@ BEGIN
       'partner', to_jsonb(v_partner)
     );
   ELSE
-    -- No peer available right now -> Insert current user into queue as waiting
+    -- Nobody is searching right now -> Put current user in queue as waiting
     INSERT INTO public.match_queue (
       user_id,
       telegram_id,
