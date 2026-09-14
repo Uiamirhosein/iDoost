@@ -147,20 +147,10 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
           <button
             type="button"
             onClick={onOpenPaywall}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold shrink-0 transition-all ${
-              isProUser
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                : 'bg-amber-500/15 border-amber-500/30 text-amber-300 hover:bg-amber-500/25'
-            }`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold shrink-0 transition-all bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 cursor-pointer"
           >
-            <Crown
-              className={`w-3.5 h-3.5 ${
-                isProUser
-                  ? 'fill-emerald-400 text-emerald-400'
-                  : 'fill-amber-400 text-amber-400'
-              }`}
-            />
-            <span>{isProUser ? 'VIP Pro فعال' : 'ارتقا به VIP'}</span>
+            <Crown className="w-3.5 h-3.5 fill-emerald-400 text-emerald-400" />
+            <span>۹۰ روز رایگان ویژه</span>
           </button>
         </div>
       </div>
