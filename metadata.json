@@ -1,0 +1,6 @@
+{
+  "name": "مینی‌اپ همسریابی تلگرام (همدم)",
+  "description": "مینی اپ تلگرام برای همسریابی و دوستیابی مدرن با زبان فارسی، چینش بنتو، انیمیشن‌های روان و طراحی دارک",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
