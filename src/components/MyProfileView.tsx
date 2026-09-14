@@ -18,7 +18,6 @@ import { persianNumber } from '../utils/persianNumbers';
 import { ProfileWizard } from './ProfileWizard';
 import { InviteFriendsBottomSheet } from './InviteFriendsBottomSheet';
 import { BlockedUsersBottomSheet } from './BlockedUsersBottomSheet';
-import { MOCK_USERS } from '../mockData';
 import { GamificationState } from '../utils/gamification';
 import { MatchDnaBentoCard } from './MatchDnaBentoCard';
 import { UserAvatar } from './UserAvatar';
@@ -31,6 +30,7 @@ interface MyProfileViewProps {
   isProUser?: boolean;
   onGrantWeekPro?: () => void;
   blockedUserIds?: string[];
+  blockedUsersList?: UserProfile[];
   onUnblockUser?: (userId: string) => void;
   autoOpenWizard?: boolean;
   onWizardComplete?: (updated: UserProfile) => void;
@@ -47,6 +47,7 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
   isProUser = false,
   onGrantWeekPro = () => {},
   blockedUserIds = [],
+  blockedUsersList,
   onUnblockUser = () => {},
   autoOpenWizard = false,
   onWizardComplete,
@@ -69,31 +70,32 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
   // Referral Invite count state
   const [inviteCount, setInviteCount] = useState<number>(2);
 
-  // Resolved list of blocked user profiles
-  const resolvedBlockedUsers = blockedUserIds.map((id) => {
-    const found = MOCK_USERS.find((u) => u.id === id);
-    if (found) return found;
-    return {
-      id,
-      name: 'کاربر مسدود شده',
-      age: 28,
-      gender: 'male' as const,
-      city: 'نامشخص',
-      province: 'ایران',
-      distanceKm: 0,
-      maritalStatus: 'مجرد',
-      job: '',
-      education: '',
-      heightCm: 175,
-      bio: '',
-      photos: [],
-      interests: [],
-      hobbies: [],
-      redLines: [],
-      isVerified: false,
-      isOnline: false,
-    } as UserProfile;
-  });
+  // Resolved list of blocked user profiles (from live Supabase records or fallback)
+  const resolvedBlockedUsers =
+    blockedUsersList && blockedUsersList.length > 0
+      ? blockedUsersList
+      : blockedUserIds.map((id) => {
+          return {
+            id,
+            name: 'کاربر مسدود شده',
+            age: 24,
+            gender: 'male' as const,
+            city: 'نامشخص',
+            province: 'ایران',
+            distanceKm: 0,
+            maritalStatus: 'مجرد',
+            job: '',
+            education: '',
+            heightCm: 175,
+            bio: '',
+            photos: [],
+            interests: [],
+            hobbies: [],
+            redLines: [],
+            isVerified: false,
+            isOnline: false,
+          } as UserProfile;
+        });
 
   const targetPerReward = 5;
   const currentBatch = inviteCount % targetPerReward;

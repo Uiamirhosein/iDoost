@@ -43,6 +43,9 @@ import {
   subscribeToChatMessages,
   subscribeToChatSessionStatus,
   closeChatSession,
+  fetchBlockedUsers,
+  blockUser,
+  unblockUser,
 } from './lib/supabase';
 
 export default function App() {
@@ -123,9 +126,20 @@ export default function App() {
     matchByCompatibility: true,
   });
 
-  // Blocked users list & toast notification state
-  const [blockedUserIds, setBlockedUserIds] = useState<string[]>(['user-4']);
+  // Real Blocked users state from Supabase
+  const [blockedUsers, setBlockedUsers] = useState<UserProfile[]>([]);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [appToast, setAppToast] = useState<string | null>(null);
+
+  // Load blocked users from Supabase on currentUser load
+  useEffect(() => {
+    if (currentUser?.id && !currentUser.id.startsWith('local-')) {
+      fetchBlockedUsers(currentUser.id).then((list) => {
+        setBlockedUsers(list);
+        setBlockedUserIds(list.map((u) => u.id));
+      });
+    }
+  }, [currentUser?.id]);
 
   // Initial Onboarding Sync Modal State (first launch or triggered)
   const [showInitialSyncModal, setShowInitialSyncModal] = useState<boolean>(() => {
@@ -570,23 +584,37 @@ export default function App() {
     }
   };
 
-  // Block User Handler
-  const handleBlockUser = (userId: string) => {
+  // Block User Handler (Saves to Supabase)
+  const handleBlockUser = async (userId: string) => {
     setBlockedUserIds((prev) => [...prev, userId]);
     if (activeChatUser?.id === userId) {
+      setBlockedUsers((prev) => [...prev, activeChatUser]);
       setActiveChatUser(null);
       setActiveChatMessages([]);
       setActiveChatConnectedAt(null);
       setIsChatMinimized(false);
     }
     setChatHistory((prev) => prev.filter((h) => h.user.id !== userId));
-    showAppToast('کاربر مسدود شد و از تاریخچه چت‌ها نیز حذف گردید.');
+
+    if (currentUser?.id && !currentUser.id.startsWith('local-')) {
+      await blockUser(currentUser.id, userId);
+      const updatedList = await fetchBlockedUsers(currentUser.id);
+      setBlockedUsers(updatedList);
+      setBlockedUserIds(updatedList.map((u) => u.id));
+    }
+    showAppToast('کاربر با موفقیت مسدود شد و به لیست مسدودی اضافه گردید.');
   };
 
-  // Unblock User Handler
-  const handleUnblockUser = (userId: string) => {
-    const unblockedUser = MOCK_USERS.find((u) => u.id === userId);
+  // Unblock User Handler (Updates Supabase)
+  const handleUnblockUser = async (userId: string) => {
+    const unblockedUser = blockedUsers.find((u) => u.id === userId);
     setBlockedUserIds((prev) => prev.filter((id) => id !== userId));
+    setBlockedUsers((prev) => prev.filter((u) => u.id !== userId));
+
+    if (currentUser?.id && !currentUser.id.startsWith('local-')) {
+      await unblockUser(currentUser.id, userId);
+    }
+
     showAppToast(
       unblockedUser
         ? `کاربر «${unblockedUser.name}» با موفقیت از لیست مسدودی خارج شد.`
@@ -766,6 +794,7 @@ export default function App() {
                     setIsPaywallOpen(true);
                   }}
                   blockedUserIds={blockedUserIds}
+                  blockedUsersList={blockedUsers}
                   onUnblockUser={handleUnblockUser}
                   autoOpenWizard={autoOpenProfileWizard}
                   onWizardComplete={handleProfileWizardCompleted}

@@ -406,3 +406,69 @@ export async function closeChatSession(
   }
   return true;
 }
+
+/**
+ * Fetch blocked users for a specific user from Supabase
+ */
+export async function fetchBlockedUsers(userId: string): Promise<UserProfile[]> {
+  try {
+    const { data, error } = await supabase
+      .from('blocked_users')
+      .select('blocked_user_id, users:blocked_user_id (*)')
+      .eq('user_id', userId);
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data
+      .map((row: any) => row.users)
+      .filter(Boolean)
+      .map(mapDbUserToUserProfile);
+  } catch (err) {
+    console.error('Error fetching blocked users:', err);
+    return [];
+  }
+}
+
+/**
+ * Block a user in Supabase
+ */
+export async function blockUser(userId: string, targetUserId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('blocked_users')
+      .upsert({ user_id: userId, blocked_user_id: targetUserId });
+
+    if (error) {
+      console.error('Error blocking user:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error blocking user:', err);
+    return false;
+  }
+}
+
+/**
+ * Unblock a user in Supabase
+ */
+export async function unblockUser(userId: string, targetUserId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('blocked_users')
+      .delete()
+      .eq('user_id', userId)
+      .eq('blocked_user_id', targetUserId);
+
+    if (error) {
+      console.error('Error unblocking user:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Error unblocking user:', err);
+    return false;
+  }
+}
