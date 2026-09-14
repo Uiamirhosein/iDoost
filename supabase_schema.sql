@@ -136,6 +136,9 @@ BEGIN
     FROM public.users
     WHERE id = CASE WHEN v_active_session.user1_id = p_user_id THEN v_active_session.user2_id ELSE v_active_session.user1_id END;
 
+    -- Ensure queue has matched record
+    DELETE FROM public.match_queue WHERE user_id = p_user_id;
+
     RETURN jsonb_build_object(
       'status', 'matched',
       'chat_session_id', v_active_session.id,

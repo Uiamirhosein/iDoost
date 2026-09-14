@@ -210,12 +210,40 @@ export function subscribeToMatchQueue(
 ): () => void {
   const channelName = `match_queue_${userId}_${Date.now()}`;
 
+  // Poll fallback interval in case WebSocket packet is dropped by mobile network/VPN
+  const pollInterval = setInterval(async () => {
+    try {
+      const { data } = await supabase
+        .from('match_queue')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'matched')
+        .not('matched_chat_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && data[0].matched_chat_id) {
+        clearInterval(pollInterval);
+        const row = data[0];
+        let partnerProfile: UserProfile | null = null;
+        if (row.matched_with_user_id) {
+          partnerProfile = await fetchUserProfileById(row.matched_with_user_id);
+        }
+        if (partnerProfile) {
+          onMatched(row.matched_chat_id, partnerProfile);
+        }
+      }
+    } catch (e) {
+      // Ignore poll error
+    }
+  }, 1500);
+
   const channel = supabase
     .channel(channelName)
     .on(
       'postgres_changes',
       {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
         table: 'match_queue',
         filter: `user_id=eq.${userId}`,
@@ -223,6 +251,7 @@ export function subscribeToMatchQueue(
       async (payload) => {
         const newRow = payload.new as any;
         if (newRow && newRow.status === 'matched' && newRow.matched_chat_id) {
+          clearInterval(pollInterval);
           // Fetch partner profile
           let partnerProfile: UserProfile | null = null;
           if (newRow.matched_with_user_id) {
@@ -237,6 +266,7 @@ export function subscribeToMatchQueue(
     .subscribe();
 
   return () => {
+    clearInterval(pollInterval);
     supabase.removeChannel(channel);
   };
 }
@@ -317,6 +347,38 @@ export function subscribeToChatMessages(
 ): () => void {
   const channelName = `chat_messages_${sessionId}_${Date.now()}`;
 
+  // Poll fallback in case WebSocket event is delayed or dropped
+  let lastSeenTime = new Date().toISOString();
+  const pollInterval = setInterval(async () => {
+    try {
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_session_id', sessionId)
+        .neq('sender_id', currentUserId)
+        .gt('created_at', lastSeenTime)
+        .order('created_at', { ascending: true });
+
+      if (data && data.length > 0) {
+        for (const msg of data) {
+          lastSeenTime = msg.created_at;
+          onNewMessage({
+            id: msg.id,
+            senderId: msg.sender_id === currentUserId ? 'me' : msg.sender_id,
+            text: msg.text,
+            timestamp: new Date(msg.created_at).toLocaleTimeString('fa-IR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            status: msg.status || 'sent',
+          });
+        }
+      }
+    } catch (e) {
+      // Ignore poll error
+    }
+  }, 1500);
+
   const channel = supabase
     .channel(channelName)
     .on(
@@ -330,6 +392,7 @@ export function subscribeToChatMessages(
       (payload) => {
         const msg = payload.new as any;
         if (!msg) return;
+        lastSeenTime = msg.created_at;
 
         // Map DB message to ChatMessage
         const chatMsg: ChatMessage = {
@@ -349,6 +412,7 @@ export function subscribeToChatMessages(
     .subscribe();
 
   return () => {
+    clearInterval(pollInterval);
     supabase.removeChannel(channel);
   };
 }
@@ -361,6 +425,24 @@ export function subscribeToChatSessionStatus(
   onClosed: (closedBy: string) => void
 ): () => void {
   const channelName = `chat_status_${sessionId}_${Date.now()}`;
+
+  // Poll fallback for session closure
+  const pollInterval = setInterval(async () => {
+    try {
+      const { data } = await supabase
+        .from('chat_sessions')
+        .select('status, closed_by')
+        .eq('id', sessionId)
+        .single();
+
+      if (data && data.status === 'closed') {
+        clearInterval(pollInterval);
+        onClosed(data.closed_by);
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }, 2000);
 
   const channel = supabase
     .channel(channelName)
@@ -375,6 +457,7 @@ export function subscribeToChatSessionStatus(
       (payload) => {
         const row = payload.new as any;
         if (row && row.status === 'closed') {
+          clearInterval(pollInterval);
           onClosed(row.closed_by);
         }
       }
@@ -382,6 +465,7 @@ export function subscribeToChatSessionStatus(
     .subscribe();
 
   return () => {
+    clearInterval(pollInterval);
     supabase.removeChannel(channel);
   };
 }
