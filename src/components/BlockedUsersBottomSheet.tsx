@@ -12,6 +12,8 @@ import {
 import { UserProfile } from '../types';
 import { persianNumber } from '../utils/persianNumbers';
 
+import { UserAvatar } from './UserAvatar';
+
 interface BlockedUsersBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -150,14 +152,14 @@ export const BlockedUsersBottomSheet: React.FC<BlockedUsersBottomSheetProps> = (
                     >
                       {/* User Info */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-rose-500/30 shrink-0 bg-white/5">
-                          <img
-                            src={user.photos[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
-                            alt={user.name}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover grayscale opacity-80"
+                        <div className="relative shrink-0">
+                          <UserAvatar
+                            src={user.photos?.[0]}
+                            name={user.name}
+                            size="md"
+                            className="border-rose-500/30 opacity-80"
                           />
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none rounded-2xl">
                             <UserX className="w-4 h-4 text-rose-400" />
                           </div>
                         </div>

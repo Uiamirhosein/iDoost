@@ -22,6 +22,7 @@ import {
 import { UserProfile } from '../types';
 import { persianNumber } from '../utils/persianNumbers';
 import { OnlineBadge } from './OnlineBadge';
+import { UserAvatar } from './UserAvatar';
 
 interface SearchingRadarModalProps {
   isOpen: boolean;
@@ -288,15 +289,11 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
             <div className="w-full flex items-center justify-center gap-2 sm:gap-3 my-1 relative z-10">
               {/* User 1 (Current User) */}
               <div className="flex flex-col items-center">
-                <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl p-0.5 bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-md">
-                  <img
-                    src={
-                      currentUser?.photos?.[0] ||
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
-                    }
-                    alt="شما"
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full rounded-[14px] object-cover"
+                <div className="relative rounded-2xl p-0.5 bg-gradient-to-tr from-purple-500 to-indigo-500 shadow-md">
+                  <UserAvatar
+                    src={currentUser?.photos?.[0]}
+                    name={currentUser?.name || 'شما'}
+                    size="lg"
                   />
                   <div className="absolute -bottom-1 -end-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#121322]" />
                 </div>
@@ -326,17 +323,16 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
               {/* User 2 (Matched User) */}
               <div className="flex flex-col items-center">
                 <div
-                  className={`relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl p-0.5 shadow-md ${
+                  className={`relative rounded-2xl p-0.5 shadow-md ${
                     isGoldenMatch
                       ? 'bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 ring-2 ring-amber-400/70'
                       : 'bg-gradient-to-tr from-pink-500 to-amber-500'
                   }`}
                 >
-                  <img
-                    src={matchedUser.photos[0]}
-                    alt={matchedUser.name}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full rounded-[14px] object-cover"
+                  <UserAvatar
+                    src={matchedUser.photos?.[0]}
+                    name={matchedUser.name}
+                    size="lg"
                   />
                   <OnlineBadge
                     size="sm"

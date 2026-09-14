@@ -134,7 +134,6 @@ export function getTelegramUser(): TelegramUser {
       first_name: 'سارا',
       last_name: 'رضوانی',
       username: 'sara_rezvani',
-      photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
     };
   }
 
@@ -144,7 +143,6 @@ export function getTelegramUser(): TelegramUser {
     first_name: 'امیرحسین',
     last_name: 'جفاری',
     username: 'amir_dev',
-    photo_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=800&q=80',
   };
 }
 

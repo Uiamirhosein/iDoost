@@ -15,6 +15,8 @@ import {
 import { UserProfile } from '../types';
 import { toPersianDigits, formatDistance, formatAge } from '../utils/persianNumbers';
 
+import { UserAvatar } from './UserAvatar';
+
 interface ProfileCardBentoProps {
   user: UserProfile;
   isFront?: boolean;
@@ -85,14 +87,23 @@ export const ProfileCardBento: React.FC<ProfileCardBentoProps> = ({
         className="relative w-full h-full rounded-[28px] bg-[#12131c]/95 border border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.55)] overflow-y-auto no-scrollbar flex flex-col transition-colors duration-300 select-none"
       >
         {/* TOP SECTION: Large Hero Photo with Interactive Carousel */}
-        <div className="relative w-full h-[320px] shrink-0 bg-[#181a26] overflow-hidden rounded-t-[26px]">
-          <img
-            src={user.photos[currentPhotoIndex] || user.photos[0]}
-            alt={user.name}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover object-top transition-transform duration-500 ease-out"
-            loading="eager"
-          />
+        <div className="relative w-full h-[320px] shrink-0 bg-[#181a26] overflow-hidden rounded-t-[26px] flex items-center justify-center">
+          {user.photos && user.photos.length > 0 && user.photos[currentPhotoIndex] && !user.photos[currentPhotoIndex].includes('unsplash.com') ? (
+            <img
+              src={user.photos[currentPhotoIndex] || user.photos[0]}
+              alt={user.name}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover object-top transition-transform duration-500 ease-out"
+              loading="eager"
+            />
+          ) : (
+            <UserAvatar
+              src={null}
+              name={user.name}
+              size="xl"
+              className="!w-full !h-full !rounded-none"
+            />
+          )}
 
           {/* Photo Gradient Overlays */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#12131c] via-black/20 to-black/60 pointer-events-none" />

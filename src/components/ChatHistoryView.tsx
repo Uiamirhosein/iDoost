@@ -19,6 +19,8 @@ import {
 import { ClosedChatRecord, UserProfile } from '../types';
 import { persianNumber } from '../utils/persianNumbers';
 
+import { UserAvatar } from './UserAvatar';
+
 interface ChatHistoryViewProps {
   history: ClosedChatRecord[];
   activeChatUser: UserProfile | null;
@@ -75,12 +77,12 @@ export const ChatHistoryView: React.FC<ChatHistoryViewProps> = ({
           className="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-purple-500/15 to-emerald-500/15 border border-emerald-500/30 shadow-lg flex items-center justify-between gap-3"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-400 shrink-0">
-              <img
-                src={activeChatUser.photos[0]}
-                alt={activeChatUser.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
+            <div className="relative shrink-0">
+              <UserAvatar
+                src={activeChatUser.photos?.[0]}
+                name={activeChatUser.name}
+                size="md"
+                className="border-emerald-400"
               />
               <span className="absolute bottom-1 end-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
             </div>
@@ -143,15 +145,11 @@ export const ChatHistoryView: React.FC<ChatHistoryViewProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   {/* User info */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative w-13 h-13 min-w-[52px] min-h-[52px] rounded-2xl overflow-hidden border border-white/10 shrink-0">
-                      <img
-                        src={record.user.photos[0]}
-                        alt={record.user.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover grayscale-[25%] group-hover:grayscale-0 transition-all"
-                      />
-                      <div className="absolute inset-0 bg-black/20" />
-                    </div>
+                    <UserAvatar
+                      src={record.user.photos?.[0]}
+                      name={record.user.name}
+                      size="md"
+                    />
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">

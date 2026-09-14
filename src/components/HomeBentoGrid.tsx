@@ -19,6 +19,8 @@ import {
 import { persianNumber } from '../utils/persianNumbers';
 import { UserProfile } from '../types';
 import { GamificationState } from '../utils/gamification';
+import { fetchOnlineUsersPresence } from '../lib/supabase';
+import { UserAvatar } from './UserAvatar';
 
 interface HomeBentoGridProps {
   onRandomSearch: () => void;
@@ -43,16 +45,26 @@ export const HomeBentoGrid: React.FC<HomeBentoGridProps> = ({
   gamification,
   onOpenGamification,
 }) => {
-  // Live online users counter with organic slight fluctuations
-  const [onlineCount, setOnlineCount] = useState<number>(1428);
+  // Live online users count & avatars fetched from Supabase
+  const [onlineCount, setOnlineCount] = useState<number>(1);
+  const [onlineAvatars, setOnlineAvatars] = useState<Array<{ id: string; name: string; photo?: string }>>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Fluctuates slightly by +2 to -1
-      const delta = Math.floor(Math.random() * 5) - 2;
-      setOnlineCount((prev) => Math.max(1200, prev + delta));
-    }, 4000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+    const loadPresence = async () => {
+      const presence = await fetchOnlineUsersPresence();
+      if (isMounted) {
+        setOnlineCount(presence.count);
+        setOnlineAvatars(presence.users);
+      }
+    };
+
+    loadPresence();
+    const interval = setInterval(loadPresence, 12000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -238,20 +250,21 @@ export const HomeBentoGrid: React.FC<HomeBentoGridProps> = ({
 
         {/* Small live online users indicator */}
         <div id="live-online-footer-badge" className="flex items-center gap-2">
-          <div className="flex -space-x-1.5 space-x-reverse">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-              alt="user"
-              referrerPolicy="no-referrer"
-              className="w-4 h-4 rounded-full border border-[#131422] object-cover"
-            />
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80"
-              alt="user"
-              referrerPolicy="no-referrer"
-              className="w-4 h-4 rounded-full border border-[#131422] object-cover"
-            />
-          </div>
+          {onlineAvatars.length > 0 ? (
+            <div className="flex -space-x-1.5 space-x-reverse">
+              {onlineAvatars.slice(0, 3).map((u) => (
+                <UserAvatar
+                  key={u.id}
+                  src={u.photo}
+                  name={u.name}
+                  size="xs"
+                  className="border-[#131422]"
+                />
+              ))}
+            </div>
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          )}
           <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {persianNumber(onlineCount.toLocaleString())} نفر آنلاین

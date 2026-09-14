@@ -36,8 +36,8 @@ export function mapDbUserToUserProfile(row: any): UserProfile {
     bio: row.bio || '',
     photos:
       Array.isArray(row.photos) && row.photos.length > 0
-        ? row.photos
-        : ['https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=800&q=80'],
+        ? row.photos.filter((p: string) => !p.includes('unsplash.com'))
+        : [],
     interests: Array.isArray(row.interests) ? row.interests : ['موسیقی', 'کتاب', 'کافه گردی'],
     hobbies: Array.isArray(row.hobbies) ? row.hobbies : [],
     redLines: Array.isArray(row.red_lines) ? row.red_lines : [],
@@ -70,7 +70,7 @@ export async function syncTelegramUser(tgUser: TelegramUser): Promise<UserProfil
     return {
       id: `local-${tgUser.id}`,
       name: fullName,
-      age: 25,
+      age: 24,
       gender: 'male',
       city: 'تهران',
       province: 'تهران',
@@ -80,19 +80,16 @@ export async function syncTelegramUser(tgUser: TelegramUser): Promise<UserProfil
       education: 'دانشگاهی',
       heightCm: 175,
       isVerified: true,
-      bio: 'علاقه‌مند به گفتگوهای عمیق و آشنایی هدفمند.',
-      photos: [
-        tgUser.photo_url ||
-          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=800&q=80',
-      ],
+      bio: '',
+      photos: tgUser.photo_url ? [tgUser.photo_url] : [],
       interests: ['موسیقی', 'کتاب', 'کافه گردی'],
       telegramHandle: tgUser.username,
       isOnline: true,
     };
   }
 
-  // If user has a photo from Telegram and DB has only default, update it
-  if (tgUser.photo_url && (!data.photos || data.photos.length === 0 || data.photos[0].includes('photo-1535713875002'))) {
+  // If user has a photo from Telegram, save it in DB
+  if (tgUser.photo_url && (!data.photos || data.photos.length === 0 || data.photos.some((p: string) => p.includes('unsplash.com')))) {
     await supabase
       .from('users')
       .update({ photos: [tgUser.photo_url] })
@@ -101,6 +98,44 @@ export async function syncTelegramUser(tgUser: TelegramUser): Promise<UserProfil
   }
 
   return mapDbUserToUserProfile(data);
+}
+
+/**
+ * Get count and latest avatars of active online users from Supabase
+ */
+export async function fetchOnlineUsersPresence(): Promise<{
+  count: number;
+  users: Array<{ id: string; name: string; photo?: string }>;
+}> {
+  try {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data, count, error } = await supabase
+      .from('users')
+      .select('id, name, photos, last_seen', { count: 'exact' })
+      .eq('is_online', true)
+      .gte('last_seen', tenMinutesAgo)
+      .order('last_seen', { ascending: false })
+      .limit(5);
+
+    if (error || !data) {
+      return { count: 1, users: [] };
+    }
+
+    const cleanUsers = data.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      photo: Array.isArray(u.photos) && u.photos.length > 0 && !u.photos[0].includes('unsplash.com')
+        ? u.photos[0]
+        : undefined,
+    }));
+
+    return {
+      count: Math.max(count || 1, cleanUsers.length, 1),
+      users: cleanUsers,
+    };
+  } catch (err) {
+    return { count: 1, users: [] };
+  }
 }
 
 /**

@@ -31,6 +31,7 @@ import { persianNumber, formatDistance } from '../utils/persianNumbers';
 import { OnlineBadge } from './OnlineBadge';
 import { EndChatFeedbackModal } from './EndChatFeedbackModal';
 import { FloatingXpFlyer } from './FloatingXpFlyer';
+import { UserAvatar } from './UserAvatar';
 
 interface ChatScreenProps {
   user?: UserProfile;
@@ -268,9 +269,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   // Photos for profile drawer
-  const photos = user.photos && user.photos.length > 0 ? user.photos : [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80'
-  ];
+  const photos = user.photos && user.photos.length > 0 ? user.photos : [];
 
   const handleNextPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -316,11 +315,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             className="flex items-center gap-2.5 cursor-pointer group"
           >
             <div className="relative shrink-0">
-              <img
+              <UserAvatar
                 src={photos[0]}
-                alt={user.name}
-                referrerPolicy="no-referrer"
-                className="w-10 h-10 rounded-full object-cover border border-white/15 group-hover:border-purple-400 transition-colors"
+                name={user.name}
+                size="md"
+                className="!rounded-full border-white/15 group-hover:border-purple-400 transition-colors"
               />
               {user.isOnline !== false ? (
                 <OnlineBadge
@@ -629,13 +628,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               <div className="w-12 h-1 rounded-full bg-white/20 mx-auto mb-3" />
 
               {/* Photo Gallery Carousel */}
-              <div className="relative w-full h-64 rounded-3xl overflow-hidden border border-white/10 shadow-lg mb-4 bg-black/40">
-                <img
-                  src={photos[activePhotoIndex]}
-                  alt={user.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative w-full h-64 rounded-3xl overflow-hidden border border-white/10 shadow-lg mb-4 bg-black/40 flex items-center justify-center">
+                {photos.length > 0 && photos[activePhotoIndex] && !photos[activePhotoIndex].includes('unsplash.com') ? (
+                  <img
+                    src={photos[activePhotoIndex]}
+                    alt={user.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserAvatar
+                    src={null}
+                    name={user.name}
+                    size="xl"
+                    className="!w-full !h-full !rounded-none"
+                  />
+                )}
 
                 {/* Photo navigation buttons */}
                 {photos.length > 1 && (

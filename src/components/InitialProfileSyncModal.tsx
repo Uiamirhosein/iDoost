@@ -16,6 +16,8 @@ import {
 import { UserProfile } from '../types';
 import { persianNumber } from '../utils/persianNumbers';
 
+import { UserAvatar } from './UserAvatar';
+
 interface InitialProfileSyncModalProps {
   isOpen: boolean;
   user: UserProfile;
@@ -117,15 +119,12 @@ export const InitialProfileSyncModal: React.FC<InitialProfileSyncModalProps> = (
         {/* User Synced Avatar & Identity Preview */}
         <div className="flex flex-col items-center justify-center text-center my-3">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-purple-500 via-pink-500 to-sky-400 shadow-xl">
-              <img
-                src={
-                  user.photos[0] ||
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
-                }
-                alt={user.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover rounded-full bg-white/10"
+            <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-purple-500 via-pink-500 to-sky-400 shadow-xl flex items-center justify-center">
+              <UserAvatar
+                src={user.photos?.[0]}
+                name={user.name}
+                size="xl"
+                className="!rounded-full !w-full !h-full border-none"
               />
             </div>
             <div className="absolute -bottom-1 -end-1 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center border-2 border-[#121322] shadow-sm">

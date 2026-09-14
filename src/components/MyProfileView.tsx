@@ -21,6 +21,7 @@ import { BlockedUsersBottomSheet } from './BlockedUsersBottomSheet';
 import { MOCK_USERS } from '../mockData';
 import { GamificationState } from '../utils/gamification';
 import { MatchDnaBentoCard } from './MatchDnaBentoCard';
+import { UserAvatar } from './UserAvatar';
 
 interface MyProfileViewProps {
   user: UserProfile;
@@ -85,9 +86,7 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
       education: '',
       heightCm: 175,
       bio: '',
-      photos: [
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-      ],
+      photos: [],
       interests: [],
       hobbies: [],
       redLines: [],
@@ -170,14 +169,14 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
 
         <div className="flex items-center gap-3.5 relative z-10">
           {/* Avatar (Telegram synced, read-only) */}
-          <div className="relative w-16 h-16 sm:w-20 sm:h-20 min-w-[64px] min-h-[64px] rounded-2xl overflow-hidden border-2 border-sky-400/60 shadow-lg shrink-0">
-            <img
-              src={user.photos[0]}
-              alt={user.name}
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover"
+          <div className="relative shrink-0">
+            <UserAvatar
+              src={user.photos?.[0]}
+              name={user.name}
+              size="lg"
+              className="border-2 border-sky-400/60 shadow-lg"
             />
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none rounded-2xl">
               <Lock className="w-3.5 h-3.5 text-white/70" />
             </div>
           </div>

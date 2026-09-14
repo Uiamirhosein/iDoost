@@ -4,6 +4,8 @@ import { UserProfile, MatchItem } from '../types';
 import { persianNumber } from '../utils/persianNumbers';
 import { OnlineBadge } from './OnlineBadge';
 
+import { UserAvatar } from './UserAvatar';
+
 interface MatchesViewProps {
   matches: MatchItem[];
   onSelectUserForChat: (user: UserProfile) => void;
@@ -76,12 +78,11 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                     onClick={() => onSelectUserForChat(item.user)}
                     className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
                   >
-                    <div className="relative w-16 h-16 rounded-2xl p-0.5 bg-gradient-to-tr from-purple-400 via-pink-400 to-rose-400 shadow-md">
-                      <img
-                        src={item.user.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
-                        alt={item.user.name || 'کاربر'}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover rounded-[14px]"
+                    <div className="relative rounded-2xl p-0.5 bg-gradient-to-tr from-purple-400 via-pink-400 to-rose-400 shadow-md">
+                      <UserAvatar
+                        src={item.user.photos?.[0]}
+                        name={item.user.name}
+                        size="lg"
                       />
                       {item.isOnline && (
                         <OnlineBadge
@@ -113,12 +114,11 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                 className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.07] transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-white/10">
-                    <img
-                      src={match.user.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
-                      alt={match.user.name || 'کاربر'}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
+                  <div className="relative shrink-0">
+                    <UserAvatar
+                      src={match.user.photos?.[0]}
+                      name={match.user.name}
+                      size="md"
                     />
                     {match.isOnline && (
                       <OnlineBadge
