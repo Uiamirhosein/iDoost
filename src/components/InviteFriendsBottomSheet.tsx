@@ -21,9 +21,10 @@ interface InviteFriendsBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   isProUser?: boolean;
-  onGrantWeekPro: () => void;
+  onGrantWeekPro?: () => void;
   inviteCount: number;
-  onSimulateInvite: () => void;
+  referralLink?: string;
+  onSimulateInvite?: () => void;
 }
 
 export const InviteFriendsBottomSheet: React.FC<InviteFriendsBottomSheetProps> = ({
@@ -32,13 +33,13 @@ export const InviteFriendsBottomSheet: React.FC<InviteFriendsBottomSheetProps> =
   isProUser = false,
   onGrantWeekPro,
   inviteCount,
+  referralLink: customReferralLink,
   onSimulateInvite,
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
   const [claimedReward, setClaimedReward] = useState<boolean>(false);
 
-  const referralCode = 'HAMDAM_8492';
-  const referralLink = `https://t.me/hamdam_bot?start=ref_${referralCode.toLowerCase()}`;
+  const referralLink = customReferralLink || `https://t.me/iDoostBot?start=ref_invite`;
 
   const targetPerReward = 5;
   const currentBatch = inviteCount % targetPerReward;

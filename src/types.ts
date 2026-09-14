@@ -25,6 +25,9 @@ export interface UserProfile {
   lifestyle?: string[];
   isOnline?: boolean;
   lastSeen?: string;
+  inviteCount?: number;
+  isPro?: boolean;
+  referredBy?: number;
 }
 
 export interface SearchFilterState {

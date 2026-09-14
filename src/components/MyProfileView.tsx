@@ -19,6 +19,7 @@ import { ProfileWizard } from './ProfileWizard';
 import { InviteFriendsBottomSheet } from './InviteFriendsBottomSheet';
 import { BlockedUsersBottomSheet } from './BlockedUsersBottomSheet';
 import { GamificationState } from '../utils/gamification';
+import { getReferralInviteLink } from '../lib/telegram';
 import { MatchDnaBentoCard } from './MatchDnaBentoCard';
 import { UserAvatar } from './UserAvatar';
 
@@ -65,8 +66,10 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
     }
   }, [autoOpenWizard]);
 
-  // Referral Invite count state
-  const [inviteCount, setInviteCount] = useState<number>(2);
+  // Referral Invite count state from user profile or live count
+  const inviteCount = user.inviteCount || 0;
+  const userTelegramId = (user as any).telegram_id || (user as any).telegramId || 990000001;
+  const referralLink = getReferralInviteLink(userTelegramId);
 
   // Resolved list of blocked user profiles (from live Supabase records or fallback)
   const resolvedBlockedUsers =
@@ -99,10 +102,6 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
   const currentBatch = inviteCount % targetPerReward;
   const progressPercent = Math.min(100, Math.round((currentBatch / targetPerReward) * 100));
 
-  const handleSimulateInvite = () => {
-    setInviteCount((prev) => prev + 1);
-  };
-
   // Calculate profile completion percentage
   const calculateCompletion = () => {
     let score = 25; // photo + name from telegram
@@ -133,10 +132,20 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
           <button
             type="button"
             onClick={onOpenPaywall}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold shrink-0 transition-all bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 cursor-pointer"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold shrink-0 transition-all cursor-pointer ${
+              isProUser
+                ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                : 'bg-purple-500/15 border-purple-500/30 text-purple-300 hover:bg-purple-500/25'
+            }`}
           >
-            <Crown className="w-3.5 h-3.5 fill-emerald-400 text-emerald-400" />
-            <span>۹۰ روز رایگان ویژه</span>
+            <Crown
+              className={`w-3.5 h-3.5 ${
+                isProUser
+                  ? 'fill-amber-400 text-amber-400'
+                  : 'fill-purple-400 text-purple-400'
+              }`}
+            />
+            <span>{isProUser ? 'VIP Pro فعال' : 'ارتقا به VIP (با ۵ دعوت)'}</span>
           </button>
         </div>
       </div>
@@ -389,7 +398,7 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
         isProUser={isProUser}
         onGrantWeekPro={onGrantWeekPro}
         inviteCount={inviteCount}
-        onSimulateInvite={handleSimulateInvite}
+        referralLink={referralLink}
       />
 
       {/* 7. Blocked Users Bottom Sheet */}

@@ -21,20 +21,21 @@ interface InviteFriendsSectionProps {
   isProUser?: boolean;
   onGrantWeekPro: () => void;
   onOpenPaywall?: () => void;
+  inviteCount?: number;
+  referralLink?: string;
 }
 
 export const InviteFriendsSection: React.FC<InviteFriendsSectionProps> = ({
   isProUser = false,
   onGrantWeekPro,
   onOpenPaywall,
+  inviteCount = 0,
+  referralLink: customReferralLink,
 }) => {
-  // State for total successful invites
-  const [inviteCount, setInviteCount] = useState<number>(2); // realistic start for good UX
   const [copied, setCopied] = useState<boolean>(false);
   const [claimedReward, setClaimedReward] = useState<boolean>(false);
 
-  const referralCode = 'HAMDAM_8492';
-  const referralLink = `https://t.me/hamdam_bot?start=ref_${referralCode.toLowerCase()}`;
+  const referralLink = customReferralLink || `https://t.me/iDoostBot?start=ref_invite`;
 
   // Calculations for 5-invites threshold
   const targetPerReward = 5;
@@ -53,17 +54,6 @@ export const InviteFriendsSection: React.FC<InviteFriendsSectionProps> = ({
       `سلام! به مینی‌اپ آی‌دوست در تلگرام ملحق شو تا با افراد نزدیک و متناسب با معیارهات آشنا بشی 👇\n${referralLink}`
     );
     window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${text}`, '_blank');
-  };
-
-  // Simulate a successful invite for preview testing
-  const handleSimulateInvite = () => {
-    setInviteCount((prev) => {
-      const next = prev + 1;
-      if (next % targetPerReward === 0) {
-        setClaimedReward(false);
-      }
-      return next;
-    });
   };
 
   const handleClaimWeekPro = () => {
@@ -156,14 +146,6 @@ export const InviteFriendsSection: React.FC<InviteFriendsSectionProps> = ({
                   <span>
                     فقط <strong className="text-white font-bold">{persianNumber(targetPerReward - currentBatch)}</strong> دعوت دیگر تا دریافت خودکار ۱ هفته Pro
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleSimulateInvite}
-                    title="برای تست و بررسی عملکرد کلیک کنید"
-                    className="text-[10px] text-purple-300 hover:text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 px-2 py-1 rounded-lg border border-purple-500/30 transition-colors"
-                  >
-                    +۱ دعوت تستی
-                  </button>
                 </div>
               )}
             </AnimatePresence>

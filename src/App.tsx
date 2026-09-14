@@ -30,6 +30,8 @@ import {
   getTelegramUser,
   initTelegramWebApp,
   isRealTelegramClient,
+  getTelegramReferrerId,
+  getReferralInviteLink,
   TelegramUser,
 } from './lib/telegram';
 import {
@@ -49,6 +51,7 @@ import {
   saveChatRecordToHistory,
   triggerDailyDatabasePurge,
   fetchUserActiveChatSession,
+  processReferralAttribution,
 } from './lib/supabase';
 
 export default function App() {
@@ -105,6 +108,22 @@ export default function App() {
           setCurrentUser(profile);
           setChatHistory(getSavedChatHistory(profile.id));
           triggerDailyDatabasePurge();
+
+          // Check if current user reached 5 invites for PRO
+          if (profile.isPro || (profile.inviteCount || 0) >= 5) {
+            setIsProUser(true);
+            setFilteredSearchRemaining(999);
+          }
+
+          // Process affiliate referral if newcomer entered via a referral link
+          const referrerId = getTelegramReferrerId();
+          if (referrerId && referrerId !== currentTgUser.id) {
+            processReferralAttribution(currentTgUser.id, referrerId).then((res) => {
+              if (res.success) {
+                showAppToast('لینک دعوت با موفقیت ثبت شد! به آی‌دوست خوش آمدید ✨');
+              }
+            });
+          }
 
           // Restore ongoing active chat session if user closed mini app while chatting
           const activeSession = await fetchUserActiveChatSession(profile.id);
@@ -833,12 +852,17 @@ export default function App() {
           userLevel={gamification.userLevel}
         />
 
-        {/* Modal 3: Sleek 'Get Pro' Paywall Modal */}
+        {/* Modal 3: Sleek 'Get Pro' Paywall Modal (5-Invites Affiliate Unlock) */}
         <PaywallModal
           isOpen={isPaywallOpen}
           onClose={() => setIsPaywallOpen(false)}
           reason={paywallReason}
-          onUpgrade={handleUpgradeToPro}
+          inviteCount={currentUser.inviteCount || 0}
+          referralLink={getReferralInviteLink(currentTgUser.id)}
+          onOpenInvite={() => {
+            setIsPaywallOpen(false);
+            setActiveTab('profile');
+          }}
         />
 
         {/* Modal 4: Initial Telegram Profile Sync with Vertical Step Bar */}

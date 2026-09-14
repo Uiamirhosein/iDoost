@@ -149,3 +149,36 @@ export function getTelegramUser(): TelegramUser {
 export function isRealTelegramClient(): boolean {
   return !!(window.Telegram?.WebApp?.initDataUnsafe?.user?.id);
 }
+
+/**
+ * Extracts referral start parameter passed to the Telegram Mini App (e.g. ?startapp=ref_123456)
+ */
+export function getTelegramReferrerId(): number | null {
+  if (typeof window === 'undefined') return null;
+
+  // 1. Direct Telegram initDataUnsafe start_param
+  const startParam = (window.Telegram?.WebApp?.initDataUnsafe as any)?.start_param;
+  if (startParam && typeof startParam === 'string' && startParam.startsWith('ref_')) {
+    const parsed = parseInt(startParam.replace('ref_', ''), 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
+  // 2. URL parameters (?startapp=ref_123456 or ?ref=123456 or tgWebAppStartParam)
+  const urlParams = new URLSearchParams(window.location.search);
+  const param = urlParams.get('startapp') || urlParams.get('tgWebAppStartParam') || urlParams.get('ref');
+  if (param) {
+    const clean = param.replace('ref_', '');
+    const parsed = parseInt(clean, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
+  return null;
+}
+
+/**
+ * Generates personalized Telegram share & invitation link
+ */
+export function getReferralInviteLink(telegramId: number): string {
+  const botUsername = 'iDoostBot';
+  return `https://t.me/${botUsername}?start=ref_${telegramId}`;
+}

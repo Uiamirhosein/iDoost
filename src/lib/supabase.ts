@@ -47,6 +47,9 @@ export function mapDbUserToUserProfile(row: any): UserProfile {
     lifestyle: Array.isArray(row.lifestyle) ? row.lifestyle : ['علاقه‌مند به آرامش'],
     isOnline: row.is_online ?? true,
     lastSeen: 'آنلاین',
+    inviteCount: row.invite_count || 0,
+    isPro: (row.invite_count >= 5) || !!row.is_pro,
+    referredBy: row.referred_by || undefined,
   };
 }
 
@@ -492,8 +495,34 @@ export async function closeChatSession(
 }
 
 /**
+ * Records a referral when a new user enters via someone's affiliate link
+ */
+export async function processReferralAttribution(
+  newTelegramId: number,
+  referrerTelegramId: number
+): Promise<{ success: boolean; proUnlocked?: boolean }> {
+  try {
+    const { data, error } = await supabase.rpc('process_referral', {
+      p_new_telegram_id: newTelegramId,
+      p_referrer_telegram_id: referrerTelegramId,
+    });
+
+    if (error || !data) {
+      return { success: false };
+    }
+
+    return {
+      success: !!data.success,
+      proUnlocked: !!data.referrer_pro_unlocked,
+    };
+  } catch (err) {
+    console.error('Error in processReferralAttribution:', err);
+    return { success: false };
+  }
+}
+
+/**
  * Checks if user has an ongoing active chat session in Supabase.
- * If user closed the mini app while chatting, this restores the session upon reopening!
  */
 export async function fetchUserActiveChatSession(userId: string): Promise<{
   sessionId: string;
