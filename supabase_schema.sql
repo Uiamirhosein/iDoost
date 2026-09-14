@@ -249,7 +249,7 @@ BEGIN
 END;
 $$;
 
--- 8.1 DAILY DATABASE PURGE (Chats & Messages Retention Policy: 24 Hours)
+-- 8.1 DAILY DATABASE PURGE (STRICTLY CLOSED CHATS ONLY: Retention Policy 24 Hours)
 CREATE OR REPLACE FUNCTION public.purge_expired_chats_and_messages()
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -259,24 +259,29 @@ DECLARE
   v_deleted_messages INT;
   v_deleted_sessions INT;
 BEGIN
-  -- Delete messages older than 24 hours
+  -- 1. Strictly delete messages ONLY from CLOSED chat sessions older than 24 hours
+  -- Active ongoing conversations are NEVER touched or deleted!
   WITH del_msgs AS (
     DELETE FROM public.messages
-    WHERE created_at < now() - INTERVAL '24 hours'
+    WHERE chat_session_id IN (
+      SELECT id FROM public.chat_sessions
+      WHERE status = 'closed'
+        AND ended_at < now() - INTERVAL '24 hours'
+    )
     RETURNING id
   )
   SELECT count(*) INTO v_deleted_messages FROM del_msgs;
 
-  -- Delete closed sessions older than 24 hours
+  -- 2. Delete strictly CLOSED sessions older than 24 hours
   WITH del_sess AS (
     DELETE FROM public.chat_sessions
-    WHERE (status = 'closed' AND ended_at < now() - INTERVAL '24 hours')
-       OR (created_at < now() - INTERVAL '24 hours')
+    WHERE status = 'closed'
+      AND ended_at < now() - INTERVAL '24 hours'
     RETURNING id
   )
   SELECT count(*) INTO v_deleted_sessions FROM del_sess;
 
-  -- Delete stale queue entries older than 30 minutes
+  -- 3. Delete stale queue entries older than 30 minutes
   DELETE FROM public.match_queue
   WHERE created_at < now() - INTERVAL '30 minutes';
 
