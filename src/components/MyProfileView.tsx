@@ -230,15 +230,15 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
         </button>
       </div>
 
-      {/* 2.5. Match DNA (رادار سلیقه) Card */}
-      {gamification && (
+      {/* 2.5. Match DNA (رادار سلیقه) Card - Temporarily disabled */}
+      {/* {gamification && (
         <div className="mb-4 shrink-0">
           <MatchDnaBentoCard
             gamification={gamification}
             onOpenLevelPerks={onOpenGamification}
           />
         </div>
-      )}
+      )} */}
 
       {/* 3. Invite Friends Card (Directly underneath the Profile Card) */}
       <div

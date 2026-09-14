@@ -512,10 +512,9 @@ export default function App() {
       await closeChatSession(sessionId, currentUser.id, durationSecs);
     }
 
-    // Apply Gamification XP & Resonance feedback outcomes
+    // Apply Gamification XP feedback outcomes
     if (feedbackVibe === 'great') {
-      handleIncreaseMatchDna(5);
-      showAppToast('بازخورد عالی ثبت شد! ۳۰+ امتیاز XP و ۵٪+ به شاخص هم‌فرکانسی افزوده شد ⚡');
+      showAppToast('بازخورد عالی ثبت شد! ۳۰+ امتیاز XP دریافت کردید ⚡');
     } else if (feedbackVibe === 'okay') {
       showAppToast('۱۰+ امتیاز XP بابت پایان مکالمه دریافت کردید 💤');
     }

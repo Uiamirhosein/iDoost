@@ -81,7 +81,7 @@ export const EndChatFeedbackModal: React.FC<EndChatFeedbackModalProps> = ({
           </h3>
 
           <p className="text-xs text-white/60 mb-5 leading-relaxed px-2">
-            با ثبت بازخورد سریع، شاخص هم‌فرکانسی خود را ارتقا دهید و امتیاز تجربه (XP) بگیرید.
+            با ثبت بازخورد سریع، امتیاز تجربه (XP) بگیرید و سطح خود را ارتقا دهید.
           </p>
 
           {/* 2 Quick Vibe Reactions */}
@@ -103,7 +103,7 @@ export const EndChatFeedbackModal: React.FC<EndChatFeedbackModalProps> = ({
                 </span>
               </div>
               <p className="text-[10px] text-white/70 font-medium leading-tight">
-                کاملاً هم‌فرکانس بودیم (+۵٪ شاخص هم‌فرکانسی)
+                مکالمه مفید و دلنشین
               </p>
             </button>
 

@@ -177,15 +177,11 @@ export const GamificationPerksModal: React.FC<GamificationPerksModalProps> = ({
             </div>
           </div>
 
-          {/* Streak & Resonance info */}
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/[0.08] text-xs">
+          {/* Streak info */}
+          <div className="flex items-center justify-between pt-1 border-t border-white/[0.08] text-xs">
             <div className="flex items-center gap-1.5 text-amber-300 font-bold">
               <Flame className="w-4 h-4 text-orange-400 fill-orange-400" />
-              <span>استریک: {persianNumber(gamification.dailyStreak)} روز</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-pink-300 font-bold">
-              <Waves className="w-4 h-4 text-pink-400" />
-              <span>شاخص هم‌فرکانسی: {persianNumber(gamification.matchDnaPercentage)}٪</span>
+              <span>استریک فعالیت: {persianNumber(gamification.dailyStreak)} روز متوالی</span>
             </div>
           </div>
         </div>
