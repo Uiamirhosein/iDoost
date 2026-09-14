@@ -52,7 +52,7 @@ export const ChatHistoryView: React.FC<ChatHistoryViewProps> = ({
             </span>
           </h2>
           <p className="text-[11px] text-white/50 mt-0.5">
-            آرشیو چت‌های پایان‌یافته • غیرقابل بازگشایی مجدد
+            نگهداری موقت به مدت ۲۴ ساعت • پاکسازی خودکار در پایان روز
           </p>
         </div>
 

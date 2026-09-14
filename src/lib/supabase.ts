@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ChatMessage } from '../types';
+import { UserProfile, ChatMessage, ClosedChatRecord } from '../types';
 import { TelegramUser } from './telegram';
 
 const supabaseUrl =
@@ -491,6 +491,64 @@ export async function closeChatSession(
   return true;
 }
 
+/**
+ * Fetch and cleanup user's closed chat history (only keeps chats from the last 24 hours)
+ */
+export function getSavedChatHistory(userId: string): ClosedChatRecord[] {
+  try {
+    const key = `idoost_chat_history_${userId}`;
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const list: ClosedChatRecord[] = JSON.parse(raw);
+
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    // Filter out chats older than 24 hours
+    const valid = list.filter((r) => {
+      const chatTime = (r as any).createdAtTimestamp || (r.id ? parseInt(r.id.replace('history-', ''), 10) : 0);
+      if (!chatTime) return true;
+      return now - chatTime < ONE_DAY_MS;
+    });
+
+    if (valid.length !== list.length) {
+      localStorage.setItem(key, JSON.stringify(valid));
+    }
+
+    return valid;
+  } catch (err) {
+    return [];
+  }
+}
+
+/**
+ * Save updated closed chat record to user's 24-hour history
+ */
+export function saveChatRecordToHistory(userId: string, record: ClosedChatRecord) {
+  try {
+    const key = `idoost_chat_history_${userId}`;
+    const current = getSavedChatHistory(userId);
+    const enrichedRecord = {
+      ...record,
+      createdAtTimestamp: Date.now(),
+    };
+    const updated = [enrichedRecord, ...current.filter((r) => r.id !== record.id)];
+    localStorage.setItem(key, JSON.stringify(updated));
+  } catch (err) {
+    console.error('Error saving chat history:', err);
+  }
+}
+
+/**
+ * Triggers backend database purge of sessions and messages older than 24 hours
+ */
+export async function triggerDailyDatabasePurge() {
+  try {
+    await supabase.rpc('purge_expired_chats_and_messages');
+  } catch (e) {
+    // Ignore
+  }
+}
 /**
  * Fetch blocked users for a specific user from Supabase
  */

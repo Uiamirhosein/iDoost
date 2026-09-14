@@ -249,6 +249,45 @@ BEGIN
 END;
 $$;
 
+-- 8.1 DAILY DATABASE PURGE (Chats & Messages Retention Policy: 24 Hours)
+CREATE OR REPLACE FUNCTION public.purge_expired_chats_and_messages()
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_deleted_messages INT;
+  v_deleted_sessions INT;
+BEGIN
+  -- Delete messages older than 24 hours
+  WITH del_msgs AS (
+    DELETE FROM public.messages
+    WHERE created_at < now() - INTERVAL '24 hours'
+    RETURNING id
+  )
+  SELECT count(*) INTO v_deleted_messages FROM del_msgs;
+
+  -- Delete closed sessions older than 24 hours
+  WITH del_sess AS (
+    DELETE FROM public.chat_sessions
+    WHERE (status = 'closed' AND ended_at < now() - INTERVAL '24 hours')
+       OR (created_at < now() - INTERVAL '24 hours')
+    RETURNING id
+  )
+  SELECT count(*) INTO v_deleted_sessions FROM del_sess;
+
+  -- Delete stale queue entries older than 30 minutes
+  DELETE FROM public.match_queue
+  WHERE created_at < now() - INTERVAL '30 minutes';
+
+  RETURN jsonb_build_object(
+    'deleted_messages', v_deleted_messages,
+    'deleted_sessions', v_deleted_sessions,
+    'cleaned_at', now()
+  );
+END;
+$$;
+
 -- 9. UPSERT TELEGRAM USER FUNCTION
 CREATE OR REPLACE FUNCTION public.sync_telegram_user(
   p_telegram_id BIGINT,

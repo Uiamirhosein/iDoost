@@ -45,6 +45,9 @@ import {
   fetchBlockedUsers,
   blockUser,
   unblockUser,
+  getSavedChatHistory,
+  saveChatRecordToHistory,
+  triggerDailyDatabasePurge,
 } from './lib/supabase';
 
 export default function App() {
@@ -99,6 +102,8 @@ export default function App() {
       .then((profile) => {
         if (isMounted) {
           setCurrentUser(profile);
+          setChatHistory(getSavedChatHistory(profile.id));
+          triggerDailyDatabasePurge();
         }
       })
       .catch((err) => {
@@ -499,6 +504,8 @@ export default function App() {
     };
 
     setChatHistory((prev) => [newRecord, ...prev]);
+    saveChatRecordToHistory(currentUser.id, newRecord);
+
     const partnerName = activeChatUser.name;
     setActiveChatSessionId(null);
     setActiveChatUser(null);
