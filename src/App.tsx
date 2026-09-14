@@ -48,6 +48,7 @@ import {
   getSavedChatHistory,
   saveChatRecordToHistory,
   triggerDailyDatabasePurge,
+  fetchUserActiveChatSession,
 } from './lib/supabase';
 
 export default function App() {
@@ -99,11 +100,46 @@ export default function App() {
     let isMounted = true;
 
     syncTelegramUser(currentTgUser)
-      .then((profile) => {
+      .then(async (profile) => {
         if (isMounted) {
           setCurrentUser(profile);
           setChatHistory(getSavedChatHistory(profile.id));
           triggerDailyDatabasePurge();
+
+          // Restore ongoing active chat session if user closed mini app while chatting
+          const activeSession = await fetchUserActiveChatSession(profile.id);
+          if (activeSession && isMounted) {
+            setActiveChatSessionId(activeSession.sessionId);
+            setActiveChatUser(activeSession.partner);
+            setActiveChatConnectedAt(activeSession.connectedAt);
+
+            const msgs = await fetchSessionMessages(activeSession.sessionId, profile.id);
+            if (isMounted) {
+              setActiveChatMessages(msgs);
+            }
+
+            // Reconnect live message listener
+            if (chatMsgSubRef.current) chatMsgSubRef.current();
+            chatMsgSubRef.current = subscribeToChatMessages(
+              activeSession.sessionId,
+              profile.id,
+              (incomingMsg) => {
+                setActiveChatMessages((prev) => {
+                  if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+                  return [...prev, incomingMsg];
+                });
+              }
+            );
+
+            // Reconnect session close listener
+            if (chatStatusSubRef.current) chatStatusSubRef.current();
+            chatStatusSubRef.current = subscribeToChatSessionStatus(activeSession.sessionId, (closedBy) => {
+              if (closedBy !== profile.id) {
+                setIsChatClosedByPartner(true);
+                showAppToast(`کاربر «${activeSession.partner.name}» به گفتگو پایان داد.`);
+              }
+            });
+          }
         }
       })
       .catch((err) => {

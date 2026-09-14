@@ -492,6 +492,45 @@ export async function closeChatSession(
 }
 
 /**
+ * Checks if user has an ongoing active chat session in Supabase.
+ * If user closed the mini app while chatting, this restores the session upon reopening!
+ */
+export async function fetchUserActiveChatSession(userId: string): Promise<{
+  sessionId: string;
+  partner: UserProfile;
+  connectedAt: number;
+} | null> {
+  try {
+    const { data, error } = await supabase
+      .from('chat_sessions')
+      .select('*')
+      .eq('status', 'active')
+      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const session = data[0];
+    const partnerId = session.user1_id === userId ? session.user2_id : session.user1_id;
+    const partner = await fetchUserProfileById(partnerId);
+
+    if (!partner) return null;
+
+    return {
+      sessionId: session.id,
+      partner,
+      connectedAt: new Date(session.created_at).getTime(),
+    };
+  } catch (err) {
+    console.error('Error fetching active session:', err);
+    return null;
+  }
+}
+
+/**
  * Fetch and cleanup user's closed chat history (only keeps chats from the last 24 hours)
  */
 export function getSavedChatHistory(userId: string): ClosedChatRecord[] {
