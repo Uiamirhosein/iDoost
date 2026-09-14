@@ -260,7 +260,7 @@ export const InitialProfileSyncModal: React.FC<InitialProfileSyncModalProps> = (
                 <p className="text-[11px] text-white/50 mt-0.5">
                   {step3Status === 'completed'
                     ? 'پروفایل اولیه شما با موفقیت ثبت و ایجاد شد.'
-                    : 'تخصیص شناسه یکتا و پایگاه داده همدم'}
+                    : 'تخصیص شناسه یکتا و پایگاه داده آی‌دوست'}
                 </p>
               </div>
             </div>

@@ -35,7 +35,7 @@ export const TelegramHeader: React.FC<TelegramHeaderProps> = ({
         <div className="flex items-center gap-1.5 ms-1">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <h1 className="text-xs sm:text-sm font-black tracking-tight text-white/95">
-            همدم
+            آی‌دوست
           </h1>
           <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
         </div>

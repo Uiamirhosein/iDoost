@@ -50,7 +50,7 @@ export const InviteFriendsSection: React.FC<InviteFriendsSectionProps> = ({
 
   const handleShareTelegram = () => {
     const text = encodeURIComponent(
-      `سلام! به مینی‌اپ همدم در تلگرام ملحق شو تا با افراد نزدیک و متناسب با معیارهات آشنا بشی 👇\n${referralLink}`
+      `سلام! به مینی‌اپ آی‌دوست در تلگرام ملحق شو تا با افراد نزدیک و متناسب با معیارهات آشنا بشی 👇\n${referralLink}`
     );
     window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${text}`, '_blank');
   };

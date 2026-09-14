@@ -1107,7 +1107,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </h3>
 
               <p className="text-xs text-white/70 leading-relaxed mb-4">
-                کاربر «{user.name}» گفتگو را بست. طبق قوانین همدم، این گفتگو پایان یافت و به بخش «تاریخچه چت‌ها» منتقل گردید.
+                کاربر «{user.name}» گفتگو را بست. طبق قوانین آی‌دوست، این گفتگو پایان یافت و به بخش «تاریخچه چت‌ها» منتقل گردید.
               </p>
 
               <button

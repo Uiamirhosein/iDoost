@@ -22,7 +22,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export function mapDbUserToUserProfile(row: any): UserProfile {
   return {
     id: row.id,
-    name: row.name || `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'کاربر همدم',
+    name: row.name || `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'کاربر آی‌دوست',
     age: row.age || 24,
     gender: row.gender || 'male',
     city: row.city || 'تهران',
@@ -54,7 +54,7 @@ export function mapDbUserToUserProfile(row: any): UserProfile {
  * Upsert current Telegram user into Supabase and fetch fresh profile
  */
 export async function syncTelegramUser(tgUser: TelegramUser): Promise<UserProfile> {
-  const fullName = `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() || 'کاربر همدم';
+  const fullName = `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() || 'کاربر آی‌دوست';
 
   const { data, error } = await supabase.rpc('sync_telegram_user', {
     p_telegram_id: tgUser.id,
@@ -76,7 +76,7 @@ export async function syncTelegramUser(tgUser: TelegramUser): Promise<UserProfil
       province: 'تهران',
       distanceKm: 0,
       maritalStatus: 'مجرد',
-      job: 'عضو همدم',
+      job: 'عضو آی‌دوست',
       education: 'دانشگاهی',
       heightCm: 175,
       isVerified: true,

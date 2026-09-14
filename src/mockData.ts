@@ -227,14 +227,14 @@ export const MOCK_USERS: UserProfile[] = [
 
 export const CURRENT_USER: UserProfile = {
   id: 'current-user',
-  name: 'کاربر همدم',
+  name: 'کاربر آی‌دوست',
   age: 24,
   gender: 'male',
   city: 'تهران',
   province: 'تهران',
   distanceKm: 0,
   maritalStatus: 'مجرد',
-  job: 'عضو همدم',
+  job: 'عضو آی‌دوست',
   education: 'دانشگاهی',
   heightCm: 175,
   isVerified: true,

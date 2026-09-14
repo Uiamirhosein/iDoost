@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TelegramHeader } from './components/TelegramHeader';
 import { BottomNav } from './components/BottomNav';
 import { HomeBentoGrid } from './components/HomeBentoGrid';
 import { FilterSearchModal } from './components/FilterSearchModal';
@@ -657,12 +656,6 @@ export default function App() {
 
       {/* Main Container */}
       <div className="relative w-full max-w-[430px] h-[100dvh] sm:h-[844px] bg-[#0c0d16] sm:rounded-[40px] shadow-[0_25px_70px_rgba(0,0,0,0.8)] border-0 sm:border sm:border-white/10 flex flex-col overflow-hidden">
-        {/* Telegram Header */}
-        <TelegramHeader
-          isPro={isProUser}
-          onOpenGamification={() => setIsPerksModalOpen(true)}
-        />
-
         {/* Browser Multi-User Testing Banner (Shown only when outside actual Telegram app) */}
         {!isRealTelegramClient() && (
           <div className="w-full bg-[#161828] border-b border-purple-500/20 px-3 py-1.5 flex items-center justify-between text-[11px] text-white/90 select-none z-20">
