@@ -10,7 +10,6 @@ import { ChatHistoryView } from './components/ChatHistoryView';
 import { MyProfileView } from './components/MyProfileView';
 import { InitialProfileSyncModal } from './components/InitialProfileSyncModal';
 import {
-  MOCK_USERS,
   CURRENT_USER,
   calculateMutualCompatibility,
   INITIAL_CHAT_HISTORY,
@@ -159,37 +158,6 @@ export default function App() {
     setTimeout(() => setAppToast(null), 4000);
   };
 
-  // Helper: Filter & Rank Candidates based on criteria and user profile compatibility
-  const getFilteredCandidates = (
-    criteria: SearchFilterState,
-    excludeIds: string[] = []
-  ): UserProfile[] => {
-    let candidates = MOCK_USERS.filter((u) => {
-      if (u.id === currentUser.id) return false;
-      if (blockedUserIds.includes(u.id)) return false;
-      if (excludeIds.includes(u.id)) return false;
-      if (criteria.gender !== 'all' && u.gender !== criteria.gender) return false;
-      if (u.age < criteria.minAge || u.age > criteria.maxAge) return false;
-      if (criteria.province !== 'همه استان‌ها' && u.province !== criteria.province) {
-        return false;
-      }
-      return true;
-    });
-
-    // Score mutual compatibility with currentUser based on profile tags & criteria
-    candidates = candidates.map((u) => ({
-      ...u,
-      compatibilityScore: calculateMutualCompatibility(currentUser, u),
-    }));
-
-    // If matchByCompatibility is enabled, sort descending by compatibility score
-    if (criteria.matchByCompatibility) {
-      candidates.sort((a, b) => (b.compatibilityScore || 0) - (a.compatibilityScore || 0));
-    }
-
-    return candidates;
-  };
-
   // Action 1: Random Search (Connected to Supabase Real-Time Waiting Room)
   const handleRandomSearch = async () => {
     if (activeChatUser) {
@@ -255,9 +223,8 @@ export default function App() {
     setIsFilterModalOpen(true);
   };
 
-  // Action 2.1: Execute Filtered Search after choosing filters
-  // NOTE: Credit is NOT deducted here! It will ONLY be deducted if user confirms within 30s
-  const handleApplyFilteredSearch = (criteria: SearchFilterState) => {
+  // Action 2.1: Execute Filtered Search (Connects to Realtime Supabase Matchmaker)
+  const handleApplyFilteredSearch = async (criteria: SearchFilterState) => {
     if (!isProUser && filteredSearchRemaining <= 0) {
       setPaywallReason('limit_reached');
       setIsPaywallOpen(true);
@@ -266,64 +233,47 @@ export default function App() {
 
     setFilterCriteria(criteria);
     setIsFilterModalOpen(false);
-
     setSearchType('filtered');
     setIsSearching(true);
+    setFoundUser(null);
 
-    // Find candidates matching criteria ranked by compatibility
-    const candidates = getFilteredCandidates(criteria, []);
+    // Clean up any lingering queue subscription
+    if (matchQueueSubRef.current) {
+      matchQueueSubRef.current();
+      matchQueueSubRef.current = null;
+    }
 
-    const chosen =
-      candidates.length > 0
-        ? candidates[0]
-        : {
-            ...(MOCK_USERS.find((u) => !blockedUserIds.includes(u.id)) || MOCK_USERS[0]),
-            compatibilityScore: 88,
-          };
-
-    setFoundUser(chosen);
-    setSeenCandidateIds([chosen.id]);
+    try {
+      const result = await startRandomMatch(currentUser.id, currentTgUser.id);
+      if (result.status === 'matched' && result.partner && result.chatSessionId) {
+        setActiveChatSessionId(result.chatSessionId);
+        setFoundUser(result.partner);
+        showAppToast('هم‌صحبت پیدا شد! در حال انتقال به گفتگو...');
+      } else {
+        showAppToast('در صف تطبیق آنی قرار گرفتید... در حال جستجوی کاربر همزمان');
+        matchQueueSubRef.current = subscribeToMatchQueue(
+          currentUser.id,
+          (chatSessionId, partner) => {
+            setActiveChatSessionId(chatSessionId);
+            setFoundUser(partner);
+            showAppToast(`اتصال برقرار شد! با «${partner.name}» مچ شدید.`);
+          }
+        );
+      }
+    } catch (err) {
+      console.error('Match search error:', err);
+      showAppToast('خطا در جستجوی هم‌صحبت آنلاین.');
+      setIsSearching(false);
+    }
   };
 
-  // Action 2.2: Next Match Handler (when user rejects or 30s timeout expires)
-  // "بعد از اینکه انصراف و رد رو زد بره سراغ جستجوی بعدی طبق فیلتر ها و کلا کنسل نشه"
-  const handleNextMatchFromRadar = () => {
-    if (searchType === 'filtered') {
-      const currentExcluded = [...seenCandidateIds, foundUser?.id].filter(Boolean) as string[];
-      let candidates = getFilteredCandidates(filterCriteria, currentExcluded);
-
-      // If all filtered candidates were seen, cycle again through filtered candidates
-      if (candidates.length === 0) {
-        candidates = getFilteredCandidates(filterCriteria, [foundUser?.id || '']);
-        if (candidates.length === 0) {
-          candidates = getFilteredCandidates(filterCriteria, []);
-        }
-      }
-
-      const nextUser =
-        candidates.length > 0
-          ? candidates[0]
-          : {
-              ...(MOCK_USERS.find(
-                (u) => !blockedUserIds.includes(u.id) && u.id !== foundUser?.id
-              ) || MOCK_USERS[0]),
-              compatibilityScore: 86,
-            };
-
-      setFoundUser(nextUser);
-      setSeenCandidateIds((prev) => [...prev, nextUser.id]);
-      showAppToast('رد شد. در حال بارگذاری پیشنهاد بعدی طبق فیلترها (بدون کسر سهمیه)');
-    } else {
-      // Random search next
-      const pool = MOCK_USERS.filter(
-        (u) => u.id !== currentUser.id && !blockedUserIds.includes(u.id) && u.id !== foundUser?.id
-      );
-      const nextUser = pool[Math.floor(Math.random() * pool.length)] || MOCK_USERS[0];
-      setFoundUser({
-        ...nextUser,
-        compatibilityScore: calculateMutualCompatibility(currentUser, nextUser),
-      });
+  // Action 2.2: Next Match Handler (Cancels and re-enqueues real match search)
+  const handleNextMatchFromRadar = async () => {
+    setFoundUser(null);
+    if (currentUser?.id) {
+      await cancelMatchSearch(currentUser.id);
     }
+    await handleRandomSearch();
   };
 
   // Action 3: Confirm Chat from Radar (Connects to Supabase Real-Time Chat Room)
