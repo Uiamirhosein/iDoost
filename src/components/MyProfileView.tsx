@@ -106,14 +106,16 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
 
   // Calculate profile completion percentage
   const calculateCompletion = () => {
-    let score = 25; // photo + name from telegram
+    let score = user.photos?.length ? 20 : 10;
+    if (user.age && user.age > 0) score += 10;
+    if (user.province?.trim() || user.city?.trim()) score += 10;
     if (user.job?.trim()) score += 10;
     if (user.education?.trim()) score += 10;
-    if (user.city?.trim()) score += 10;
-    if (user.bio?.trim()) score += 15;
-    if ((user.interests || []).length >= 3) score += 10;
-    if ((user.hobbies || []).length >= 2) score += 10;
-    if ((user.redLines || []).length >= 2) score += 10;
+    if (user.heightCm && user.heightCm > 0) score += 10;
+    if (user.bio?.trim()) score += 10;
+    if ((user.interests || []).length >= 1) score += 10;
+    if ((user.hobbies || []).length >= 1) score += 5;
+    if ((user.redLines || []).length >= 1) score += 5;
     return Math.min(100, score);
   };
 

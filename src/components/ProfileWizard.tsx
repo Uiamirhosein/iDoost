@@ -46,34 +46,34 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
 
-  // Form State
-  const [age, setAge] = useState<number>(initialProfile.age || 28);
-  const [gender, setGender] = useState<'female' | 'male'>(initialProfile.gender || 'male');
-  const [province, setProvince] = useState<string>(initialProfile.province || 'تهران');
-  const [city, setCity] = useState<string>(initialProfile.city || 'تهران');
-  const [heightCm, setHeightCm] = useState<number>(initialProfile.heightCm || 180);
-  const [maritalStatus, setMaritalStatus] = useState<MaritalStatus>(
-    initialProfile.maritalStatus || 'مجرد'
+  // Form State - Empty by default, using placeholders
+  const [age, setAge] = useState<number | ''>(initialProfile.age || '');
+  const [gender, setGender] = useState<'female' | 'male' | ''>(initialProfile.gender || '');
+  const [province, setProvince] = useState<string>(initialProfile.province || '');
+  const [city, setCity] = useState<string>(initialProfile.city || '');
+  const [heightCm, setHeightCm] = useState<number | ''>(initialProfile.heightCm || '');
+  const [maritalStatus, setMaritalStatus] = useState<MaritalStatus | ''>(
+    initialProfile.maritalStatus || ''
   );
   const [job, setJob] = useState<string>(initialProfile.job || '');
   const [education, setEducation] = useState<string>(initialProfile.education || '');
   const [smokingStatus, setSmokingStatus] = useState<string>(
-    initialProfile.smokingStatus || 'اصلاً سیگار نمی‌کشم'
+    initialProfile.smokingStatus || ''
   );
   const [bio, setBio] = useState<string>(initialProfile.bio || '');
 
-  // Chips State
+  // Chips State - Empty by default
   const [selectedInterests, setSelectedInterests] = useState<string[]>(
-    initialProfile.interests || ['هنر و دیزاین', 'تکنولوژی و وب', 'پادکست و کتاب']
+    initialProfile.interests || []
   );
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>(
-    initialProfile.hobbies || ['کافه‌گردی', 'طبیعت‌گردی و کمپ', 'سفر جاده‌ای']
+    initialProfile.hobbies || []
   );
   const [selectedRedLines, setSelectedRedLines] = useState<string[]>(
-    initialProfile.redLines || ['دروغ و پنهان‌کاری', 'سیگار و دخانیات', 'بی‌احترامی و پرخاش']
+    initialProfile.redLines || []
   );
   const [selectedLifestyle, setSelectedLifestyle] = useState<string[]>(
-    initialProfile.lifestyle || ['سحرخیز', 'ورزشکار منظم']
+    initialProfile.lifestyle || []
   );
 
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -93,12 +93,12 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
   const handleFinish = () => {
     const updated: UserProfile = {
       ...initialProfile,
-      age,
-      gender,
-      province,
-      city,
-      heightCm,
-      maritalStatus,
+      age: typeof age === 'number' ? age : 24,
+      gender: gender || 'male',
+      province: province || 'تهران',
+      city: city || 'تهران',
+      heightCm: typeof heightCm === 'number' ? heightCm : 175,
+      maritalStatus: (maritalStatus || 'مجرد') as MaritalStatus,
       job,
       education,
       smokingStatus,
@@ -230,18 +230,18 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setAge((prev) => Math.max(18, prev - 1))}
-                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm flex items-center justify-center border border-white/10 active:scale-95"
+                      onClick={() => setAge((prev) => Math.max(18, (typeof prev === 'number' ? prev : 24) - 1))}
+                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm flex items-center justify-center border border-white/10 active:scale-95 cursor-pointer"
                     >
                       -
                     </button>
                     <div className="flex-1 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-white">
-                      {persianNumber(age)} سال
+                      {age ? `${persianNumber(age)} سال` : 'انتخاب سن'}
                     </div>
                     <button
                       type="button"
-                      onClick={() => setAge((prev) => Math.min(60, prev + 1))}
-                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm flex items-center justify-center border border-white/10 active:scale-95"
+                      onClick={() => setAge((prev) => Math.min(60, (typeof prev === 'number' ? prev : 24) + 1))}
+                      className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm flex items-center justify-center border border-white/10 active:scale-95 cursor-pointer"
                     >
                       +
                     </button>
@@ -287,6 +287,9 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
                     onChange={(e) => setProvince(e.target.value)}
                     className="w-full h-10 rounded-xl bg-[#171826] border border-white/15 px-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
                   >
+                    <option value="" disabled>
+                      انتخاب استان...
+                    </option>
                     {IRAN_PROVINCES.filter((p) => p !== 'همه استان‌ها').map((p) => (
                       <option key={p} value={p}>
                         {p}
@@ -301,7 +304,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="مثلاً: تهران، ونک"
+                    placeholder="مثلاً: تهران، ونک یا شیراز..."
                     className="w-full h-10 rounded-xl bg-[#171826] border border-white/15 px-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
                   />
                 </div>
@@ -337,8 +340,9 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
                     min={140}
                     max={220}
                     value={heightCm}
-                    onChange={(e) => setHeightCm(Number(e.target.value))}
-                    className="w-full h-10 rounded-xl bg-[#171826] border border-white/15 px-3 text-xs text-white focus:outline-none focus:border-purple-500 font-bold"
+                    placeholder="مثلاً: ۱۷۵"
+                    onChange={(e) => setHeightCm(e.target.value ? Number(e.target.value) : '')}
+                    className="w-full h-10 rounded-xl bg-[#171826] border border-white/15 px-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 font-bold"
                   />
                 </div>
 
@@ -350,6 +354,9 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
                     onChange={(e) => setMaritalStatus(e.target.value as MaritalStatus)}
                     className="w-full h-10 rounded-xl bg-[#171826] border border-white/15 px-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
                   >
+                    <option value="" disabled>
+                      انتخاب وضعیت...
+                    </option>
                     <option value="مجرد">مجرد</option>
                     <option value="جدا شده">جدا شده</option>
                     <option value="همسر فوت شده">همسر فوت شده</option>
@@ -365,7 +372,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
                     type="text"
                     value={job}
                     onChange={(e) => setJob(e.target.value)}
-                    placeholder="مثلاً: طراح گرافیک"
+                    placeholder="مثلاً: برنامه‌نویس، کارمند، آزاد..."
                     className="w-full h-10 rounded-xl bg-[#171826] border border-white/15 px-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
                   />
                 </div>
@@ -376,7 +383,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({
                     type="text"
                     value={education}
                     onChange={(e) => setEducation(e.target.value)}
-                    placeholder="مثلاً: لیسانس معماری"
+                    placeholder="مثلاً: دیپلم، کارشناسی، ارشد..."
                     className="w-full h-10 rounded-xl bg-[#171826] border border-white/15 px-3 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
                   />
                 </div>
