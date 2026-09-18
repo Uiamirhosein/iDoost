@@ -38,7 +38,7 @@ async function setupMenuButton(url) {
     const res = await callTelegram('setChatMenuButton', {
       menu_button: {
         type: 'web_app',
-        text: 'شروع همدم ⚡',
+        text: 'Open',
         web_app: { url },
       },
     });
