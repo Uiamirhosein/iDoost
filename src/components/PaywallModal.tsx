@@ -185,9 +185,10 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
                   <input
                     type="text"
                     readOnly
-                    value={referralLink}
-                    className="flex-1 h-9 rounded-xl bg-white/5 border border-white/10 px-3 text-[11px] text-purple-200 truncate select-all focus:outline-none"
                     dir="ltr"
+                    value={referralLink}
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                    className="flex-1 min-w-0 h-9 rounded-xl bg-white/5 border border-white/10 px-3 text-[11px] text-purple-200 font-mono select-all overflow-x-auto focus:outline-none"
                   />
                   <button
                     type="button"

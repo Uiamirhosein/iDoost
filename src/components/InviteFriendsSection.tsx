@@ -164,13 +164,15 @@ export const InviteFriendsSection: React.FC<InviteFriendsSectionProps> = ({
           <input
             type="text"
             readOnly
+            dir="ltr"
             value={referralLink}
-            className="flex-1 bg-transparent text-xs text-purple-200 font-mono focus:outline-none select-all truncate px-1"
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+            className="flex-1 min-w-0 bg-transparent text-xs text-purple-200 font-mono focus:outline-none select-all overflow-x-auto px-1"
           />
           <button
             type="button"
             onClick={handleCopyLink}
-            className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+            className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
               copied
                 ? 'bg-emerald-500 text-slate-950 shadow-sm'
                 : 'bg-white/10 hover:bg-white/15 text-white active:scale-95'
