@@ -539,26 +539,34 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. Input Footer */}
-      <footer className="p-3 bg-[#10111a]/95 backdrop-blur-md border-t border-white/[0.08] shrink-0 z-20">
-        {isClosedByPartner ? (
-          <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-            <div className="flex items-center gap-2">
-              <DoorClosed className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>این گفتگو توسط طرف مقابل بسته شد.</span>
+        {/* 3. Input Footer */}
+        <footer className="p-3 bg-[#10111a]/95 backdrop-blur-md border-t border-white/[0.08] shrink-0 z-20">
+          {isClosedByPartner ? (
+            <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <div className="flex items-center gap-2">
+                <DoorClosed className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>این گفتگو توسط طرف مقابل بسته شد.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onCloseChat) {
+                    onCloseChat(
+                      'partner',
+                      messages,
+                      formatChatDuration(chatSecondsElapsed),
+                      'okay'
+                    );
+                  } else {
+                    onBack();
+                  }
+                }}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-bold transition-colors cursor-pointer"
+              >
+                پایان و خروج
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setPendingCloseRole('partner');
-                setShowFeedbackModal(true);
-              }}
-              className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[11px] font-bold transition-colors cursor-pointer"
-            >
-              پایان و خروج
-            </button>
-          </div>
-        ) : (
+          ) : (
           <form onSubmit={handleSend} className="flex items-center gap-2">
             <div className="flex-1 relative flex items-center">
               <input
@@ -1067,8 +1075,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                   id="confirm-close-chat-btn"
                   onClick={() => {
                     setShowConfirmCloseModal(false);
-                    setPendingCloseRole('me');
-                    setShowFeedbackModal(true);
+                    // Direct close without survey modal (temporarily disabled)
+                    if (onCloseChat) {
+                      onCloseChat(
+                        'me',
+                        messages,
+                        formatChatDuration(chatSecondsElapsed),
+                        'okay'
+                      );
+                    } else {
+                      onBack();
+                    }
                   }}
                   className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-colors"
                 >
@@ -1115,8 +1132,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 id="ack-partner-closed-btn"
                 onClick={() => {
                   setShowPartnerClosedModal(false);
-                  setPendingCloseRole('partner');
-                  setShowFeedbackModal(true);
+                  // Direct close without survey modal (temporarily disabled)
+                  if (onCloseChat) {
+                    onCloseChat(
+                      'partner',
+                      messages,
+                      formatChatDuration(chatSecondsElapsed),
+                      'okay'
+                    );
+                  } else {
+                    onBack();
+                  }
                 }}
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-95 text-white font-bold text-xs shadow-md transition-all"
               >
@@ -1127,8 +1153,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         )}
       </AnimatePresence>
 
-      {/* 9. Post-Chat Micro-Feedback Modal */}
-      <EndChatFeedbackModal
+      {/* 9. Post-Chat Micro-Feedback Modal (Temporarily Disabled) */}
+      {/* <EndChatFeedbackModal
         isOpen={showFeedbackModal}
         partnerName={user.name}
         onFeedback={(vibe) => {
@@ -1163,7 +1189,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             onBack();
           }
         }}
-      />
+      /> */}
 
       {/* 10. Flying XP Flyer GSAP Animation */}
       <FloatingXpFlyer xp={flyingXp.xp} active={flyingXp.active} />
