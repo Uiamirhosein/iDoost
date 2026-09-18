@@ -39,7 +39,7 @@ export const InviteFriendsBottomSheet: React.FC<InviteFriendsBottomSheetProps> =
   const [copied, setCopied] = useState<boolean>(false);
   const [claimedReward, setClaimedReward] = useState<boolean>(false);
 
-  const referralLink = customReferralLink || `https://t.me/iDoostBot?start=ref_invite`;
+  const referralLink = customReferralLink || `https://t.me/idoostbot?start=ref_invite`;
 
   const targetPerReward = 5;
   const currentBatch = inviteCount % targetPerReward;

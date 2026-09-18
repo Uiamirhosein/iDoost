@@ -35,7 +35,7 @@ export const InviteFriendsSection: React.FC<InviteFriendsSectionProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [claimedReward, setClaimedReward] = useState<boolean>(false);
 
-  const referralLink = customReferralLink || `https://t.me/iDoostBot?start=ref_invite`;
+  const referralLink = customReferralLink || `https://t.me/idoostbot?start=ref_invite`;
 
   // Calculations for 5-invites threshold
   const targetPerReward = 5;

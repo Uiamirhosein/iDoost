@@ -25,6 +25,7 @@ import { UserAvatar } from './UserAvatar';
 
 interface MyProfileViewProps {
   user: UserProfile;
+  telegramId?: number;
   onUpdateProfile: (updated: UserProfile) => void;
   onOpenPaywall?: () => void;
   filteredSearchRemaining: number;
@@ -41,6 +42,7 @@ interface MyProfileViewProps {
 
 export const MyProfileView: React.FC<MyProfileViewProps> = ({
   user,
+  telegramId,
   onUpdateProfile,
   onOpenPaywall,
   filteredSearchRemaining,
@@ -68,7 +70,7 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
 
   // Referral Invite count state from user profile or live count
   const inviteCount = user.inviteCount || 0;
-  const userTelegramId = (user as any).telegram_id || (user as any).telegramId || 990000001;
+  const userTelegramId = telegramId || (user as any).telegram_id || (user as any).telegramId || 990000001;
   const referralLink = getReferralInviteLink(userTelegramId);
 
   // Resolved list of blocked user profiles (from live Supabase records or fallback)

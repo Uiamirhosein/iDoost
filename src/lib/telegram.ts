@@ -210,6 +210,6 @@ export function getTelegramReferrerId(): number | null {
  * Generates both direct Mini App link and Bot /start link for Telegram
  */
 export function getReferralInviteLink(telegramId: number): string {
-  // Short direct link opening the WebApp directly with the referral parameter
-  return `https://t.me/iDoostBot/app?startapp=ref_${telegramId}`;
+  // Use exact username from bot getMe: idoostbot
+  return `https://t.me/idoostbot?start=ref_${telegramId}`;
 }

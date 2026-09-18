@@ -118,18 +118,14 @@ export default function App() {
           // Process affiliate referral if newcomer entered via a referral link
           const referrerId = getTelegramReferrerId();
           if (referrerId && referrerId !== currentTgUser.id) {
-            const alreadyProcessedKey = `idoost_referred_by_${currentTgUser.id}`;
-            const hasSentRef = localStorage.getItem(alreadyProcessedKey);
-
-            if (!hasSentRef) {
-              processReferralAttribution(currentTgUser.id, referrerId).then((res) => {
-                if (res.success) {
-                  localStorage.setItem(alreadyProcessedKey, referrerId.toString());
-                  const name = res.referrerName || 'یکی از دوستانتان';
-                  showAppToast(`🎉 تبریک! شما از طرف «${name}» به آی‌دوست دعوت شدید.`);
-                }
-              });
-            }
+            processReferralAttribution(currentTgUser.id, referrerId).then((res) => {
+              if (res.success) {
+                const name = res.referrerName || 'یکی از دوستانتان';
+                showAppToast(`🎉 تبریک! شما از طرف «${name}» به آی‌دوست دعوت شدید.`);
+              } else if (res.referrerName) {
+                showAppToast(`👋 شما قبلاً از طرف «${res.referrerName}» به آی‌دوست ملحق شده بودید.`);
+              }
+            });
           }
 
           // Restore ongoing active chat session if user closed mini app while chatting
@@ -797,6 +793,7 @@ export default function App() {
               {activeTab === 'profile' && (
                 <MyProfileView
                   user={currentUser}
+                  telegramId={currentTgUser.id}
                   onUpdateProfile={(updated) => {
                     setCurrentUser(updated);
                     showAppToast('مشخصات پروفایل شما با موفقیت ذخیره شد.');
