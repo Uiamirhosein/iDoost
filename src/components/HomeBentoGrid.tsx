@@ -60,7 +60,7 @@ export const HomeBentoGrid: React.FC<HomeBentoGridProps> = ({
     };
 
     loadPresence();
-    const interval = setInterval(loadPresence, 12000);
+    const interval = setInterval(loadPresence, 30000);
     return () => {
       isMounted = false;
       clearInterval(interval);

@@ -533,6 +533,12 @@ export default function App() {
       chatStatusSubRef.current = null;
     }
 
+    // Clean up match queue subscription if still listening
+    if (matchQueueSubRef.current) {
+      matchQueueSubRef.current();
+      matchQueueSubRef.current = null;
+    }
+
     // Inform Supabase that the chat session has concluded
     if (sessionId && closedBy === 'me') {
       const durationSecs = activeChatConnectedAt

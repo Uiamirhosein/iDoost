@@ -224,7 +224,7 @@ export function subscribeToMatchQueue(
   userId: string,
   onMatched: (chatSessionId: string, partner: UserProfile) => void
 ): () => void {
-  const channelName = `match_queue_${userId}_${Date.now()}`;
+  const channelName = `queue_${userId}`;
 
   // Poll fallback interval in case WebSocket packet is dropped by mobile network/VPN
   const pollInterval = setInterval(async () => {
@@ -361,7 +361,7 @@ export function subscribeToChatMessages(
   currentUserId: string,
   onNewMessage: (msg: ChatMessage) => void
 ): () => void {
-  const channelName = `chat_messages_${sessionId}_${Date.now()}`;
+  const channelName = `chat_${sessionId}`;
 
   // Poll fallback in case WebSocket event is delayed or dropped
   let lastSeenTime = new Date().toISOString();
@@ -440,8 +440,6 @@ export function subscribeToChatSessionStatus(
   sessionId: string,
   onClosed: (closedBy: string) => void
 ): () => void {
-  const channelName = `chat_status_${sessionId}_${Date.now()}`;
-
   // Poll fallback for session closure
   const pollInterval = setInterval(async () => {
     try {
@@ -458,31 +456,10 @@ export function subscribeToChatSessionStatus(
     } catch (e) {
       // Ignore
     }
-  }, 2000);
-
-  const channel = supabase
-    .channel(channelName)
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'chat_sessions',
-        filter: `id=eq.${sessionId}`,
-      },
-      (payload) => {
-        const row = payload.new as any;
-        if (row && row.status === 'closed') {
-          clearInterval(pollInterval);
-          onClosed(row.closed_by);
-        }
-      }
-    )
-    .subscribe();
+  }, 2500);
 
   return () => {
     clearInterval(pollInterval);
-    supabase.removeChannel(channel);
   };
 }
 
