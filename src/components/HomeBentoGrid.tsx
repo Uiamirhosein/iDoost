@@ -112,7 +112,7 @@ export const HomeBentoGrid: React.FC<HomeBentoGridProps> = ({
       <div className="flex items-center justify-between py-1 mb-2">
         <div>
           <h1 className="text-xl font-black tracking-tight text-white">
-            دیدار و هم‌صحبتی
+            آی‌دوست
           </h1>
           <p className="text-xs text-white/50 mt-0.5">
             هم‌صحبت اتفاقی یا فیلترشده خود را پیدا کنید
@@ -150,9 +150,6 @@ export const HomeBentoGrid: React.FC<HomeBentoGridProps> = ({
                 <Shuffle className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block">
-                  مچ همزمان • بدون نیاز به ارسال درخواست
-                </span>
                 <h2 className="text-base font-black text-white group-hover:text-purple-200 transition-colors">
                   جستجوی شانسی
                 </h2>

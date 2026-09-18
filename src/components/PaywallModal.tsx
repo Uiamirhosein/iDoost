@@ -141,7 +141,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
               </h2>
 
               <p className="text-xs text-white/70 mt-1.5 leading-relaxed px-2">
-                دسترسی به تمام امکانات نسخه Pro کاملاً رایگان است؛ تنها با دعوت ۵ نفر از دوستانتان به آی‌دوست، اشتراک VIP شما برای همیشه فعال خواهد شد!
+                دسترسی به تمام امکانات نسخه Pro کاملاً رایگان است؛ با دعوت ۵ نفر از دوستانتان به آی‌دوست، ۱ هفته اشتراک کامل VIP Pro به عنوان پاداش برای شما فعال خواهد شد!
               </p>
             </div>
 
@@ -170,11 +170,11 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
               <div className="text-[11px] text-white/60 text-center font-medium">
                 {remainingInvites === 0 ? (
                   <span className="text-emerald-400 font-bold">
-                    🎉 تبریک! ۵ دعوت شما تکمیل شده و اشتراک پرو برای شما فعال است.
+                    🎉 تبریک! ۵ دعوت شما تکمیل شده و ۱ هفته اشتراک پرو فعال گردید.
                   </span>
                 ) : (
                   <span>
-                    فقط با دعوت <span className="text-amber-300 font-black">{persianNumber(remainingInvites)}</span> دوست دیگر، اشتراک پرو به طور خودکار باز می‌شود.
+                    فقط با دعوت <span className="text-amber-300 font-black">{persianNumber(remainingInvites)}</span> دوست دیگر، ۱ هفته اشتراک پرو به طور خودکار فعال می‌شود.
                   </span>
                 )}
               </div>

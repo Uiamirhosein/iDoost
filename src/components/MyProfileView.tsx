@@ -128,7 +128,7 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
         <div>
           <h2 className="text-lg font-black text-white">پروفایل کاربری</h2>
           <p className="text-[11px] text-white/50">
-            مدیریت مشخصات فردی، تنظیمات و دعوت از دوستان
+            مدیریت مشخصات فردی، تنظیمات و دعوت
           </p>
         </div>
 
@@ -215,9 +215,6 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
         >
           <Edit3 className="w-4 h-4 text-purple-200 shrink-0" />
           <span>تکمیل / ویرایش پروفایل</span>
-          <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-normal">
-            {persianNumber(completionPercent)}٪ تکمیل شده
-          </span>
         </button>
       </div>
 
@@ -255,7 +252,7 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
                   <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
                 </h3>
                 <p className="text-[10px] sm:text-[11px] text-white/60 mt-0.5 leading-snug">
-                  با هر ۵ دعوت موفق، ۱ هفته اشتراک ویژه رایگان بگیرید
+                  با هر ۵ دعوت موفق، ۱ هفته اشتراک ویژه رایگان
                 </p>
               </div>
             </div>
@@ -283,15 +280,6 @@ export const MyProfileView: React.FC<MyProfileViewProps> = ({
                 }}
               />
             </div>
-          </div>
-
-          {/* Action indicator */}
-          <div className="w-full flex items-center justify-between text-xs text-purple-300 pt-1 border-t border-white/5 shrink-0 gap-2">
-            <span className="flex items-center gap-1.5 font-medium truncate min-w-0 flex-1">
-              <Share2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-              <span className="truncate">دریافت لینک اختصاصی و ارسال در تلگرام</span>
-            </span>
-            <span className="text-white/40 text-[11px] shrink-0">لمس کنید 👈</span>
           </div>
         </div>
       </div>

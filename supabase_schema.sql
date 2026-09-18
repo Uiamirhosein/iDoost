@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS public.users (
   level INT DEFAULT 1,
   is_online BOOLEAN DEFAULT true,
   last_seen TIMESTAMPTZ DEFAULT now(),
+  referred_by BIGINT,
+  invite_count INT DEFAULT 0,
+  is_pro BOOLEAN DEFAULT false,
+  pro_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -309,7 +313,7 @@ DECLARE
   v_display_name TEXT;
   v_user public.users;
 BEGIN
-  v_display_name := COALESCE(NULLIF(p_name, ''), NULLIF(TRIM(COALESCE(p_first_name, '') || ' ' || COALESCE(p_last_name, '')), ''), 'کاربر همدم');
+  v_display_name := COALESCE(NULLIF(p_name, ''), NULLIF(TRIM(COALESCE(p_first_name, '') || ' ' || COALESCE(p_last_name, '')), ''), 'کاربر آی‌دوست');
 
   INSERT INTO public.users (
     telegram_id,
@@ -375,3 +379,88 @@ CREATE POLICY "Chat sessions accessible to participants" ON public.chat_sessions
 
 DROP POLICY IF EXISTS "Messages accessible to session participants" ON public.messages;
 CREATE POLICY "Messages accessible to session participants" ON public.messages FOR ALL USING (true);
+
+-- 11. PROCESS REFERRAL WITH 1-WEEK PRO EXPIRY POLICY
+CREATE OR REPLACE FUNCTION public.process_referral(
+  p_new_telegram_id BIGINT,
+  p_referrer_telegram_id BIGINT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_new_user RECORD;
+  v_referrer RECORD;
+  v_new_invites INT;
+  v_pro_expires TIMESTAMPTZ;
+  v_pro_unlocked BOOLEAN := false;
+BEGIN
+  IF p_new_telegram_id = p_referrer_telegram_id THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'self_referral');
+  END IF;
+
+  SELECT * INTO v_referrer FROM public.users WHERE telegram_id = p_referrer_telegram_id;
+  IF NOT FOUND THEN
+    INSERT INTO public.users (telegram_id, name, is_online)
+    VALUES (p_referrer_telegram_id, 'کاربر دعوت‌کننده', false)
+    RETURNING * INTO v_referrer;
+  END IF;
+
+  SELECT * INTO v_new_user FROM public.users WHERE telegram_id = p_new_telegram_id;
+  IF NOT FOUND THEN
+    INSERT INTO public.users (telegram_id, name, is_online)
+    VALUES (p_new_telegram_id, 'کاربر جدید', true)
+    RETURNING * INTO v_new_user;
+  END IF;
+
+  IF v_new_user.referred_by IS NOT NULL THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'reason', 'already_referred',
+      'referrer_name', v_referrer.name
+    );
+  END IF;
+
+  UPDATE public.users
+  SET referred_by = p_referrer_telegram_id
+  WHERE id = v_new_user.id;
+
+  INSERT INTO public.referrals (referrer_telegram_id, referred_telegram_id)
+  VALUES (p_referrer_telegram_id, p_new_telegram_id)
+  ON CONFLICT (referred_telegram_id) DO NOTHING;
+
+  SELECT count(*) INTO v_new_invites
+  FROM public.referrals
+  WHERE referrer_telegram_id = p_referrer_telegram_id;
+
+  -- 5 Invites Threshold: Exactly 1 Week (7 Days) Pro Access
+  IF v_new_invites >= 5 THEN
+    IF v_referrer.pro_expires_at IS NOT NULL AND v_referrer.pro_expires_at > now() THEN
+      v_pro_expires := v_referrer.pro_expires_at + INTERVAL '7 days';
+    ELSE
+      v_pro_expires := now() + INTERVAL '7 days';
+    END IF;
+    v_pro_unlocked := true;
+
+    UPDATE public.users
+    SET invite_count = v_new_invites,
+        is_pro = true,
+        pro_expires_at = v_pro_expires
+    WHERE telegram_id = p_referrer_telegram_id;
+  ELSE
+    UPDATE public.users
+    SET invite_count = v_new_invites
+    WHERE telegram_id = p_referrer_telegram_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'referrer_name', v_referrer.name,
+    'referrer_telegram_id', p_referrer_telegram_id,
+    'referrer_new_invite_count', v_new_invites,
+    'referrer_pro_unlocked', v_pro_unlocked,
+    'pro_expires_at', v_pro_expires
+  );
+END;
+$$;

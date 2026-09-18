@@ -195,7 +195,7 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
             {/* Live Queue Status Pill */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold mt-1 mb-3">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>صف تطبیق آنی • کاربر همزمان در حال جستجو</span>
+              <span>در حال جستجو</span>
             </div>
 
             {/* Animated Radar Ripples */}
@@ -217,23 +217,11 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
 
             <h3 className="text-base font-black text-white mt-2">
               {searchType === 'random'
-                ? 'در حال تطبیق با کاربر آنلاین همزمان...'
+                ? 'در حال تطبیق با کاربر آنلاین...'
                 : matchByCompatibility
                 ? 'محاسبه تفاهم و اتصال همزمان...'
                 : 'بررسی معیارهای فیلتر با کاربران در حال جستجو...'}
             </h3>
-
-            {/* Real-time Simultaneous Match Philosophy Explanation */}
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-3 my-3 text-right text-[11px] text-white/70 leading-relaxed space-y-1.5">
-              <div className="flex items-center gap-1.5 text-purple-300 font-bold">
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>اتصال در لحظه (بدون نیاز به ارسال درخواست)</span>
-              </div>
-              <p>
-                در آی‌دوست هیچ درخواست یا انتظاری وجود ندارد. به محض اینکه فرد دیگری همزمان دکمه جستجو را بزند، مستقیماً به یکدیگر معرفی می‌شوید.
-              </p>
-            </div>
-
             <button
               type="button"
               onClick={onCloseSearch}
@@ -442,7 +430,7 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
                   className="w-full h-10 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] active:scale-98 text-purple-300 hover:text-white font-semibold text-xs border border-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5 text-purple-400" />
-                  <span>جستجوی کاربر همزمان دیگر (بدون کسر سهمیه)</span>
+                  <span>جستجوی کاربر دیگر (بدون کسر سهمیه)</span>
                 </button>
 
                 <button
@@ -471,7 +459,7 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
                   className="w-full h-9 rounded-xl bg-white/[0.04] text-xs text-white/70 hover:text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5 text-white/50" />
-                  <span>تطبیق با فرد همزمان دیگر</span>
+                  <span>تطبیق با فرد دیگر</span>
                 </button>
 
                 <button

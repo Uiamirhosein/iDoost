@@ -109,10 +109,12 @@ export default function App() {
           setChatHistory(getSavedChatHistory(profile.id));
           triggerDailyDatabasePurge();
 
-          // Check if current user reached 5 invites for PRO
-          if (profile.isPro || (profile.inviteCount || 0) >= 5) {
+          // Check if current user has active 1-week PRO
+          if (profile.isPro) {
             setIsProUser(true);
             setFilteredSearchRemaining(999);
+          } else {
+            setIsProUser(false);
           }
 
           // Process affiliate referral if newcomer entered via a referral link

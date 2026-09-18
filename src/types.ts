@@ -27,6 +27,7 @@ export interface UserProfile {
   lastSeen?: string;
   inviteCount?: number;
   isPro?: boolean;
+  proExpiresAt?: string;
   referredBy?: number;
 }
 

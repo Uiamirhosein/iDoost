@@ -48,9 +48,22 @@ export function mapDbUserToUserProfile(row: any): UserProfile {
     isOnline: row.is_online ?? true,
     lastSeen: 'آنلاین',
     inviteCount: row.invite_count || 0,
-    isPro: (row.invite_count >= 5) || !!row.is_pro,
+    isPro: isUserProActive(row),
+    proExpiresAt: row.pro_expires_at || undefined,
     referredBy: row.referred_by || undefined,
   };
+}
+
+/**
+ * Checks if user's PRO subscription is currently active (based on 1-week expiry date)
+ */
+export function isUserProActive(row: any): boolean {
+  if (!row) return false;
+  if (!row.is_pro) return false;
+  if (!row.pro_expires_at) return false;
+
+  const expiry = new Date(row.pro_expires_at).getTime();
+  return expiry > Date.now();
 }
 
 /**
