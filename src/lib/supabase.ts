@@ -217,8 +217,97 @@ export async function cancelMatchSearch(userId: string): Promise<boolean> {
 }
 
 /**
+ * Submits user's acceptance or rejection for a matched pair
+ */
+export async function respondToMatch(
+  chatSessionId: string,
+  userId: string,
+  action: 'accept' | 'reject'
+): Promise<{ status: string }> {
+  try {
+    const { data, error } = await supabase.rpc('respond_to_match', {
+      p_chat_session_id: chatSessionId,
+      p_user_id: userId,
+      p_action: action,
+    });
+
+    if (error || !data) {
+      console.warn('Error in respond_to_match:', error);
+      return { status: 'error' };
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Error in respondToMatch:', err);
+    return { status: 'error' };
+  }
+}
+
+/**
+ * Subscribes to match confirmation events (both accepted or one rejected)
+ */
+export function subscribeToMatchConfirmation(
+  chatSessionId: string,
+  onConfirmed: () => void,
+  onRejected: () => void
+): () => void {
+  const channelName = `confirm_${chatSessionId}`;
+
+  const pollInterval = setInterval(async () => {
+    try {
+      const { data } = await supabase
+        .from('match_queue')
+        .select('status')
+        .eq('matched_chat_id', chatSessionId)
+        .limit(1);
+
+      if (data && data.length > 0) {
+        if (data[0].status === 'mutual_accepted') {
+          clearInterval(pollInterval);
+          onConfirmed();
+        } else if (data[0].status === 'rejected') {
+          clearInterval(pollInterval);
+          onRejected();
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }, 1000);
+
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'match_queue',
+        filter: `matched_chat_id=eq.${chatSessionId}`,
+      },
+      (payload) => {
+        const row = payload.new as any;
+        if (row) {
+          if (row.status === 'mutual_accepted') {
+            clearInterval(pollInterval);
+            onConfirmed();
+          } else if (row.status === 'rejected') {
+            clearInterval(pollInterval);
+            onRejected();
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    clearInterval(pollInterval);
+    supabase.removeChannel(channel);
+  };
+}
+
+/**
  * Subscribes to match_queue realtime updates for a specific waiting user.
- * Triggered when another user matches with this waiting user.
  */
 export function subscribeToMatchQueue(
   userId: string,

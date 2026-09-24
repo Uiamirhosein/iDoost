@@ -53,6 +53,8 @@ import {
   triggerDailyDatabasePurge,
   fetchUserActiveChatSession,
   processReferralAttribution,
+  respondToMatch,
+  subscribeToMatchConfirmation,
 } from './lib/supabase';
 
 export default function App() {
@@ -83,6 +85,7 @@ export default function App() {
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [searchType, setSearchType] = useState<'random' | 'filtered'>('random');
   const [foundUser, setFoundUser] = useState<UserProfile | null>(null);
+  const [isWaitingForPartnerConfirm, setIsWaitingForPartnerConfirm] = useState<boolean>(false);
   const [seenCandidateIds, setSeenCandidateIds] = useState<string[]>([]);
 
   // Single Active Chat State & Supabase Session ID
@@ -99,6 +102,7 @@ export default function App() {
 
   // Realtime subscription refs
   const matchQueueSubRef = useRef<(() => void) | null>(null);
+  const matchConfirmSubRef = useRef<(() => void) | null>(null);
   const chatMsgSubRef = useRef<(() => void) | null>(null);
   const chatStatusSubRef = useRef<(() => void) | null>(null);
 
@@ -178,6 +182,7 @@ export default function App() {
     return () => {
       isMounted = false;
       if (matchQueueSubRef.current) matchQueueSubRef.current();
+      if (matchConfirmSubRef.current) matchConfirmSubRef.current();
       if (chatMsgSubRef.current) chatMsgSubRef.current();
       if (chatStatusSubRef.current) chatStatusSubRef.current();
     };
@@ -240,11 +245,16 @@ export default function App() {
     setSearchType('random');
     setIsSearching(true);
     setFoundUser(null);
+    setIsWaitingForPartnerConfirm(false);
 
     // Clean up any lingering queue subscription
     if (matchQueueSubRef.current) {
       matchQueueSubRef.current();
       matchQueueSubRef.current = null;
+    }
+    if (matchConfirmSubRef.current) {
+      matchConfirmSubRef.current();
+      matchConfirmSubRef.current = null;
     }
 
     try {
@@ -254,7 +264,7 @@ export default function App() {
       if (result.status === 'matched' && result.partner && result.chatSessionId) {
         setActiveChatSessionId(result.chatSessionId);
         setFoundUser(result.partner);
-        showAppToast('هم‌صحبت پیدا شد! در حال انتقال به گفتگو...');
+        showAppToast('هم‌صحبت پیدا شد! لطفاً گفتگو را تایید کنید.');
       } else {
         // User entered waiting room queue
         showAppToast('در صف تطبیق آنی قرار گرفتید... در حال جستجوی کاربر همزمان');
@@ -265,7 +275,7 @@ export default function App() {
           (chatSessionId, partner) => {
             setActiveChatSessionId(chatSessionId);
             setFoundUser(partner);
-            showAppToast(`اتصال برقرار شد! با «${partner.name}» مچ شدید.`);
+            showAppToast(`کاربر همزمان پیدا شد! با «${partner.name}» مچ شدید. لطفاً تایید کنید.`);
           }
         );
       }
@@ -306,11 +316,16 @@ export default function App() {
     setSearchType('filtered');
     setIsSearching(true);
     setFoundUser(null);
+    setIsWaitingForPartnerConfirm(false);
 
     // Clean up any lingering queue subscription
     if (matchQueueSubRef.current) {
       matchQueueSubRef.current();
       matchQueueSubRef.current = null;
+    }
+    if (matchConfirmSubRef.current) {
+      matchConfirmSubRef.current();
+      matchConfirmSubRef.current = null;
     }
 
     try {
@@ -318,7 +333,7 @@ export default function App() {
       if (result.status === 'matched' && result.partner && result.chatSessionId) {
         setActiveChatSessionId(result.chatSessionId);
         setFoundUser(result.partner);
-        showAppToast('هم‌صحبت پیدا شد! در حال انتقال به گفتگو...');
+        showAppToast('هم‌صحبت پیدا شد! لطفاً گفتگو را تایید کنید.');
       } else {
         showAppToast('در صف تطبیق آنی قرار گرفتید... در حال جستجوی کاربر همزمان');
         matchQueueSubRef.current = subscribeToMatchQueue(
@@ -326,7 +341,7 @@ export default function App() {
           (chatSessionId, partner) => {
             setActiveChatSessionId(chatSessionId);
             setFoundUser(partner);
-            showAppToast(`اتصال برقرار شد! با «${partner.name}» مچ شدید.`);
+            showAppToast(`کاربر همزمان پیدا شد! با «${partner.name}» مچ شدید. لطفاً تایید کنید.`);
           }
         );
       }
@@ -337,94 +352,133 @@ export default function App() {
     }
   };
 
-  // Action 2.2: Next Match Handler (Cancels and re-enqueues real match search)
+  // Action 2.2: Next Match Handler / Rejection (Cancels current proposal and rejects match atomically)
   const handleNextMatchFromRadar = async () => {
+    if (activeChatSessionId) {
+      await respondToMatch(activeChatSessionId, currentUser.id, 'reject');
+    }
+
+    if (matchConfirmSubRef.current) {
+      matchConfirmSubRef.current();
+      matchConfirmSubRef.current = null;
+    }
+
     setFoundUser(null);
+    setIsWaitingForPartnerConfirm(false);
+
     if (currentUser?.id) {
       await cancelMatchSearch(currentUser.id);
     }
+    showAppToast('رد شد. در حال جستجوی فرد دیگر...');
     await handleRandomSearch();
   };
 
-  // Action 3: Confirm Chat from Radar (Connects to Supabase Real-Time Chat Room)
-  const handleEnterChatFromRadar = async () => {
-    if (!foundUser) return;
-
-    // Deduct credit ONLY for filtered search upon explicit user confirmation
+  // Helper: Open Active Chat Room once BOTH parties confirm
+  const proceedToActiveChatRoom = async (sessionId: string, partner: UserProfile) => {
     if (searchType === 'filtered' && !isProUser) {
       setFilteredSearchRemaining((prev) => Math.max(0, prev - 1));
     }
 
     setIsSearching(false);
+    setIsWaitingForPartnerConfirm(false);
 
-    // Unsubscribe from waiting queue
+    // Unsubscribe from queue and confirmation
     if (matchQueueSubRef.current) {
       matchQueueSubRef.current();
       matchQueueSubRef.current = null;
     }
-
-    const sessionId = activeChatSessionId;
-    setActiveChatConnectedAt(Date.now());
-    setActiveChatUser(foundUser);
-    setIsChatMinimized(false);
-
-    // Trigger Shared Hate Icebreaker Modal upon match
-    if (sessionId) {
-      setShowIcebreaker(true);
+    if (matchConfirmSubRef.current) {
+      matchConfirmSubRef.current();
+      matchConfirmSubRef.current = null;
     }
 
-    if (sessionId) {
-      // 1. Fetch existing messages from Supabase
-      const existing = await fetchSessionMessages(sessionId, currentUser.id);
-      if (existing.length > 0) {
-        setActiveChatMessages(existing);
-      } else {
-        setActiveChatMessages([
-          {
-            id: `welcome-${Date.now()}`,
-            senderId: foundUser.id,
-            text: `سلام! ما هر دو همزمان در حال جستجو بودیم و سیستم مستقیم وصلمون کرد 👋`,
-            timestamp: 'همین الان',
-            status: 'read',
-          },
-        ]);
-      }
+    setActiveChatConnectedAt(Date.now());
+    setActiveChatUser(partner);
+    setIsChatMinimized(false);
 
-      // 2. Clean up previous chat subscriptions if any
-      if (chatMsgSubRef.current) chatMsgSubRef.current();
-      if (chatStatusSubRef.current) chatStatusSubRef.current();
+    // Trigger Shared Hate Icebreaker Modal ONLY when mutual match succeeds
+    setShowIcebreaker(true);
 
-      // 3. Listen for live incoming messages from Supabase Realtime
-      chatMsgSubRef.current = subscribeToChatMessages(
-        sessionId,
-        currentUser.id,
-        (incomingMsg) => {
-          setActiveChatMessages((prev) => {
-            if (prev.some((m) => m.id === incomingMsg.id)) return prev;
-            return [...prev, incomingMsg];
-          });
-        }
-      );
-
-      // 4. Listen for session closure by partner
-      chatStatusSubRef.current = subscribeToChatSessionStatus(sessionId, (closedBy) => {
-        if (closedBy !== currentUser.id) {
-          setIsChatClosedByPartner(true);
-          showAppToast(`کاربر «${foundUser.name}» به گفتگو پایان داد.`);
-        }
-      });
+    // 1. Fetch existing messages from Supabase
+    const existing = await fetchSessionMessages(sessionId, currentUser.id);
+    if (existing.length > 0) {
+      setActiveChatMessages(existing);
     } else {
-      // Fallback message for demo/filtered mock
-      const initialMsgs: ChatMessage[] = [
+      setActiveChatMessages([
         {
-          id: `msg-${Date.now()}`,
-          senderId: foundUser.id,
-          text: `سلام! ما هر دو همزمان در حال جستجو بودیم و سیستم مستقیم وصلمون کرد 👋 چطوری؟`,
+          id: `welcome-${Date.now()}`,
+          senderId: partner.id,
+          text: `سلام! ما هر دو همزمان در حال جستجو بودیم و سیستم مستقیم وصلمون کرد 👋`,
           timestamp: 'همین الان',
           status: 'read',
         },
-      ];
-      setActiveChatMessages(initialMsgs);
+      ]);
+    }
+
+    // 2. Clean up previous chat subscriptions if any
+    if (chatMsgSubRef.current) chatMsgSubRef.current();
+    if (chatStatusSubRef.current) chatStatusSubRef.current();
+
+    // 3. Listen for live incoming messages from Supabase Realtime
+    chatMsgSubRef.current = subscribeToChatMessages(
+      sessionId,
+      currentUser.id,
+      (incomingMsg) => {
+        setActiveChatMessages((prev) => {
+          if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+          return [...prev, incomingMsg];
+        });
+      }
+    );
+
+    // 4. Listen for session closure by partner
+    chatStatusSubRef.current = subscribeToChatSessionStatus(sessionId, (closedBy) => {
+      if (closedBy !== currentUser.id) {
+        setIsChatClosedByPartner(true);
+        showAppToast(`کاربر «${partner.name}» به گفتگو پایان داد.`);
+      }
+    });
+  };
+
+  // Action 3: Confirm Chat from Radar (Requires BOTH parties to accept)
+  const handleEnterChatFromRadar = async () => {
+    if (!foundUser || !activeChatSessionId) return;
+
+    setIsWaitingForPartnerConfirm(true);
+
+    // Clean up previous confirmation sub if any
+    if (matchConfirmSubRef.current) {
+      matchConfirmSubRef.current();
+      matchConfirmSubRef.current = null;
+    }
+
+    // Subscribe to mutual confirmation event
+    matchConfirmSubRef.current = subscribeToMatchConfirmation(
+      activeChatSessionId,
+      () => {
+        // BOTH users accepted! Proceed to chat and icebreaker
+        proceedToActiveChatRoom(activeChatSessionId, foundUser);
+      },
+      () => {
+        // Partner rejected! Revert and search again without opening chat or icebreaker
+        setIsWaitingForPartnerConfirm(false);
+        setFoundUser(null);
+        showAppToast('طرف مقابل چت را تایید نکرد. در حال جستجوی فرد دیگر...');
+        handleRandomSearch();
+      }
+    );
+
+    // Send my acceptance to Supabase
+    const res = await respondToMatch(activeChatSessionId, currentUser.id, 'accept');
+
+    if (res.status === 'mutual_accepted') {
+      // Both already accepted!
+      proceedToActiveChatRoom(activeChatSessionId, foundUser);
+    } else if (res.status === 'rejected') {
+      setIsWaitingForPartnerConfirm(false);
+      setFoundUser(null);
+      showAppToast('طرف مقابل چت را تایید نکرد. در حال جستجوی فرد دیگر...');
+      handleRandomSearch();
     }
   };
 
@@ -871,12 +925,13 @@ export default function App() {
           userLevel={gamification.userLevel}
         />
 
-        {/* Modal 2: Searching Radar with Animated Rings, 30s Countdown, and Next Match */}
+        {/* Modal 2: Searching Radar with Animated Rings, 30s Countdown, and Mutual Confirmation */}
         <SearchingRadarModal
           isOpen={isSearching}
           searchType={searchType}
           matchedUser={foundUser}
           currentUser={currentUser}
+          isWaitingForPartnerConfirm={isWaitingForPartnerConfirm}
           onEnterChat={handleEnterChatFromRadar}
           onNextMatch={handleNextMatchFromRadar}
           onCloseSearch={handleCloseRadarSearch}

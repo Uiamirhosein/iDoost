@@ -29,6 +29,7 @@ interface SearchingRadarModalProps {
   searchType: 'random' | 'filtered';
   matchedUser: UserProfile | null;
   currentUser?: UserProfile;
+  isWaitingForPartnerConfirm?: boolean;
   onEnterChat: () => void;
   onNextMatch: () => void;
   onCloseSearch: () => void;
@@ -41,6 +42,7 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
   searchType,
   matchedUser,
   currentUser,
+  isWaitingForPartnerConfirm = false,
   onEnterChat,
   onNextMatch,
   onCloseSearch,
@@ -49,25 +51,19 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
 }) => {
   const [step, setStep] = useState<'scanning' | 'found'>('scanning');
   const [secondsLeft, setSecondsLeft] = useState<number>(30);
-  const [autoConnectCountdown, setAutoConnectCountdown] = useState<number>(5);
   const [isGoldenMatch, setIsGoldenMatch] = useState<boolean>(false);
 
   const goldenBadgeRef = useRef<HTMLDivElement>(null);
   const goldenAuraRef = useRef<HTMLDivElement>(null);
 
   // Keep references to latest callbacks so intervals never have stale closures
-  // and do not unnecessarily recreate timers when parent components re-render
   const onNextMatchRef = useRef(onNextMatch);
   onNextMatchRef.current = onNextMatch;
-
-  const onEnterChatRef = useRef(onEnterChat);
-  onEnterChatRef.current = onEnterChat;
 
   // Scanning transition when opened or when matchedUser changes
   useEffect(() => {
     if (isOpen) {
       setSecondsLeft(30);
-      setAutoConnectCountdown(5);
 
       if (!matchedUser) {
         setStep('scanning');
@@ -76,7 +72,6 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
 
       // When a match is present (or arrives via Realtime), transition to found
       const timer = setTimeout(() => {
-        // Variable Reward: ~28% random chance or score >= 90%
         const score = matchedUser?.compatibilityScore || 88;
         const golden = Math.random() < 0.28 || score >= 90;
         setIsGoldenMatch(golden);
@@ -115,10 +110,9 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
     }
   }, [step, isGoldenMatch]);
 
-  // 30-second countdown for FILTERED SEARCH
-  // When 30s expires, automatically proceed to next candidate without deducting credit!
+  // 30-second countdown for BOTH users to respond before auto-next
   useEffect(() => {
-    if (!isOpen || step !== 'found' || searchType !== 'filtered') {
+    if (!isOpen || step !== 'found' || isWaitingForPartnerConfirm) {
       return;
     }
 
@@ -127,7 +121,6 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          // Defer call outside React's state updater to prevent setState-in-render error
           setTimeout(() => {
             onNextMatchRef.current();
           }, 0);
@@ -138,31 +131,7 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen, step, searchType, matchedUser?.id]);
-
-  // Optional 5s auto-connect countdown for RANDOM SEARCH (instant mutual connection)
-  useEffect(() => {
-    if (!isOpen || step !== 'found' || searchType !== 'random') {
-      return;
-    }
-
-    setAutoConnectCountdown(5);
-    const interval = setInterval(() => {
-      setAutoConnectCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          // Defer call outside React's state updater to prevent setState-in-render error
-          setTimeout(() => {
-            onEnterChatRef.current();
-          }, 0);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isOpen, step, searchType, matchedUser?.id]);
+  }, [isOpen, step, isWaitingForPartnerConfirm, matchedUser?.id]);
 
   if (!isOpen) return null;
 
@@ -380,97 +349,67 @@ export const SearchingRadarModal: React.FC<SearchingRadarModalProps> = ({
               «{matchedUser.bio}»
             </p>
 
-            {/* Filtered Search 30s Countdown Header */}
-            {searchType === 'filtered' ? (
-              <div className="w-full flex flex-col items-center gap-1 mb-2">
-                <div className="flex items-center justify-between w-full px-1 text-[11px] font-bold">
-                  <span className="text-emerald-400">اتصال بدون نیاز به درخواست تایید</span>
-                  <div className="flex items-center gap-1 text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                    <Clock className="w-3 h-3 animate-pulse" />
-                    <span>{persianNumber(secondsLeft)} ثانیه تا رد خودکار</span>
-                  </div>
-                </div>
-
-                <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden mt-0.5">
-                  <motion.div
-                    className={`h-full rounded-full transition-all duration-1000 ${
-                      secondsLeft <= 6
-                        ? 'bg-rose-500'
-                        : secondsLeft <= 14
-                        ? 'bg-amber-400'
-                        : 'bg-gradient-to-r from-purple-500 to-pink-500'
-                    }`}
-                    style={{ width: `${progressPercentage}%` }}
-                  />
+            {/* Match Countdown Header */}
+            <div className="w-full flex flex-col items-center gap-1 mb-2">
+              <div className="flex items-center justify-between w-full px-1 text-[11px] font-bold">
+                <span className="text-emerald-400">نیازمند تایید هر دو طرف برای شروع</span>
+                <div className="flex items-center gap-1 text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                  <Clock className="w-3 h-3 animate-pulse" />
+                  <span>{persianNumber(secondsLeft)} ثانیه مهلت تایید</span>
                 </div>
               </div>
-            ) : (
-              <div className="text-[10px] text-white/60 mb-2 flex items-center gap-1 justify-center">
-                <span>ورود مستقیم به گفتگو در {persianNumber(autoConnectCountdown)} ثانیه...</span>
-              </div>
-            )}
 
-            {/* Action Buttons */}
-            {searchType === 'filtered' ? (
-              <div className="w-full space-y-2">
+              <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden mt-0.5">
+                <motion.div
+                  className={`h-full rounded-full transition-all duration-1000 ${
+                    secondsLeft <= 6
+                      ? 'bg-rose-500'
+                      : secondsLeft <= 14
+                      ? 'bg-amber-400'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  }`}
+                  style={{ width: `${(secondsLeft / 30) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons: Require explicit acceptance from BOTH parties */}
+            <div className="w-full space-y-2 mt-2">
+              {isWaitingForPartnerConfirm ? (
+                <div className="w-full p-3.5 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center gap-2 text-xs font-bold text-purple-200">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                  <span>شما تایید کردید! منتظر تایید «{matchedUser.name}»...</span>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  id="confirm-filtered-chat-btn"
+                  id="confirm-chat-btn"
                   onClick={onEnterChat}
                   className="w-full h-11 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:opacity-95 active:scale-98 text-white font-black text-xs shadow-[0_4px_25px_rgba(16,185,129,0.35)] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  <span>شروع مستقیم گفتگو (کسر ۱ سهمیه)</span>
+                  <span>شروع چت و تایید گفتگو ✨</span>
                 </button>
+              )}
 
-                <button
-                  type="button"
-                  id="skip-to-next-filtered-btn"
-                  onClick={onNextMatch}
-                  className="w-full h-10 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] active:scale-98 text-purple-300 hover:text-white font-semibold text-xs border border-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-purple-400" />
-                  <span>جستجوی کاربر دیگر (بدون کسر سهمیه)</span>
-                </button>
+              <button
+                type="button"
+                id="reject-match-btn"
+                onClick={onNextMatch}
+                className="w-full h-10 rounded-2xl bg-white/[0.05] hover:bg-white/[0.1] active:scale-98 text-rose-300 hover:text-white font-semibold text-xs border border-rose-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-rose-400" />
+                <span>رد کردن / تطبیق با فرد دیگر</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={onCloseSearch}
-                  className="text-[11px] text-white/40 hover:text-white/70 transition-colors pt-1 cursor-pointer"
-                >
-                  انصراف و بستن جستجو
-                </button>
-              </div>
-            ) : (
-              <div className="w-full space-y-2">
-                <button
-                  type="button"
-                  id="enter-chat-from-radar-btn"
-                  onClick={onEnterChat}
-                  className="w-full h-11 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-600 hover:opacity-95 active:scale-98 text-white font-black text-xs shadow-[0_4px_25px_rgba(168,85,247,0.35)] transition-transform flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>ورود مستقیم به چت و شروع گفتگو</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onNextMatch}
-                  className="w-full h-9 rounded-xl bg-white/[0.04] text-xs text-white/70 hover:text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-white/50" />
-                  <span>تطبیق با فرد دیگر</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onCloseSearch}
-                  className="text-[11px] text-white/40 hover:text-white/70 transition-colors cursor-pointer"
-                >
-                  بستن
-                </button>
-              </div>
-            )}
+              <button
+                type="button"
+                onClick={onCloseSearch}
+                className="text-[11px] text-white/40 hover:text-white/70 transition-colors pt-1 cursor-pointer"
+              >
+                انصراف و بستن جستجو
+              </button>
+            </div>
           </motion.div>
         ) : null}
       </motion.div>
