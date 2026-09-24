@@ -32,8 +32,29 @@ declare global {
         viewportStableHeight?: number;
         headerColor?: string;
         backgroundColor?: string;
+        HapticFeedback?: {
+          impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void;
+          notificationOccurred: (type: 'error' | 'success' | 'warning') => void;
+          selectionChanged: () => void;
+        };
       };
     };
+  }
+}
+
+export function triggerHaptic(type: 'light' | 'medium' | 'heavy' | 'success' | 'warning' = 'medium') {
+  if (typeof window === 'undefined') return;
+  const haptic = window.Telegram?.WebApp?.HapticFeedback;
+  if (!haptic) return;
+
+  try {
+    if (type === 'success' || type === 'warning') {
+      haptic.notificationOccurred(type);
+    } else {
+      haptic.impactOccurred(type);
+    }
+  } catch (e) {
+    // Ignore if not supported
   }
 }
 

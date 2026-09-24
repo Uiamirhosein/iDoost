@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { UserProfile, ChatMessage, ClosedChatRecord } from '../types';
+import { UserProfile, ChatMessage, ClosedChatRecord, IcebreakerSessionData } from '../types';
 import { TelegramUser } from './telegram';
 
 const supabaseUrl =
@@ -674,3 +674,115 @@ export async function unblockUser(userId: string, targetUserId: string): Promise
     return false;
   }
 }
+
+/**
+ * Initializes or fetches existing match icebreaker session
+ */
+export async function getOrInitIcebreaker(
+  matchId: string,
+  userId: string
+): Promise<IcebreakerSessionData | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_or_init_icebreaker', {
+      p_match_id: matchId,
+      p_user_id: userId,
+    });
+
+    if (error || !data || data.error) {
+      console.warn('Could not init icebreaker:', error || data?.error);
+      return null;
+    }
+
+    return data as IcebreakerSessionData;
+  } catch (err) {
+    console.error('Error in getOrInitIcebreaker:', err);
+    return null;
+  }
+}
+
+/**
+ * Submits icebreaker vote choice (1 or 2)
+ */
+export async function submitIcebreakerChoice(
+  matchId: string,
+  userId: string,
+  choice: number
+): Promise<{ status: string; user1_choice?: number; user2_choice?: number } | null> {
+  try {
+    const { data, error } = await supabase.rpc('submit_icebreaker_choice', {
+      p_match_id: matchId,
+      p_user_id: userId,
+      p_choice: choice,
+    });
+
+    if (error || !data) {
+      console.warn('Could not submit icebreaker choice:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Error in submitIcebreakerChoice:', err);
+    return null;
+  }
+}
+
+/**
+ * Subscribes to realtime updates of match_icebreakers row
+ */
+export function subscribeToIcebreakerUpdates(
+  matchId: string,
+  isUser1: boolean,
+  onUpdate: (partnerChoice: number | null, status: string) => void
+): () => void {
+  const channelName = `icebreaker_${matchId}`;
+
+  // Poll fallback
+  const pollInterval = setInterval(async () => {
+    try {
+      const { data } = await supabase
+        .from('match_icebreakers')
+        .select('*')
+        .eq('match_id', matchId)
+        .single();
+
+      if (data) {
+        const partnerChoice = isUser1 ? data.user2_choice : data.user1_choice;
+        onUpdate(partnerChoice, data.status);
+        if (data.status === 'COMPLETED' || data.status === 'EXPIRED') {
+          clearInterval(pollInterval);
+        }
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }, 1200);
+
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'match_icebreakers',
+        filter: `match_id=eq.${matchId}`,
+      },
+      (payload) => {
+        const row = payload.new as any;
+        if (!row) return;
+        const partnerChoice = isUser1 ? row.user2_choice : row.user1_choice;
+        onUpdate(partnerChoice, row.status);
+        if (row.status === 'COMPLETED' || row.status === 'EXPIRED') {
+          clearInterval(pollInterval);
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    clearInterval(pollInterval);
+    supabase.removeChannel(channel);
+  };
+}
+

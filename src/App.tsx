@@ -25,6 +25,7 @@ import {
   calculateLevelFromState,
 } from './utils/gamification';
 import { LevelUpModal } from './components/LevelUpModal';
+import { IcebreakerModal } from './components/IcebreakerModal';
 import { GamificationPerksModal } from './components/GamificationPerksModal';
 import {
   getTelegramUser,
@@ -91,6 +92,10 @@ export default function App() {
   const [activeChatConnectedAt, setActiveChatConnectedAt] = useState<number | null>(null);
   const [isChatMinimized, setIsChatMinimized] = useState<boolean>(false);
   const [isChatClosedByPartner, setIsChatClosedByPartner] = useState<boolean>(false);
+
+  // Icebreaker ("اتاق نفرت مشترک") State
+  const [showIcebreaker, setShowIcebreaker] = useState<boolean>(false);
+  const [icebreakerQuickAction, setIcebreakerQuickAction] = useState<string>('');
 
   // Realtime subscription refs
   const matchQueueSubRef = useRef<(() => void) | null>(null);
@@ -362,6 +367,11 @@ export default function App() {
     setActiveChatConnectedAt(Date.now());
     setActiveChatUser(foundUser);
     setIsChatMinimized(false);
+
+    // Trigger Shared Hate Icebreaker Modal upon match
+    if (sessionId) {
+      setShowIcebreaker(true);
+    }
 
     if (sessionId) {
       // 1. Fetch existing messages from Supabase
@@ -753,6 +763,7 @@ export default function App() {
               connectedAt={activeChatConnectedAt || undefined}
               chatSessionId={activeChatSessionId || undefined}
               isClosedByPartner={isChatClosedByPartner}
+              prefilledPrompt={icebreakerQuickAction}
               onSendMessage={handleSendMessage}
               onMessagesChange={(msgs) => setActiveChatMessages(msgs)}
               onBack={() => setIsChatMinimized(true)}
@@ -921,6 +932,22 @@ export default function App() {
             }
           }}
         />
+
+        {/* Modal 7: Shared Hate Icebreaker ("اتاق نفرت مشترک") */}
+        {showIcebreaker && activeChatSessionId && activeChatUser && (
+          <IcebreakerModal
+            isOpen={showIcebreaker}
+            matchId={activeChatSessionId}
+            currentUserId={currentUser.id}
+            partnerName={activeChatUser.name}
+            onFinish={(quickAction) => {
+              setShowIcebreaker(false);
+              if (quickAction) {
+                setIcebreakerQuickAction(quickAction);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );

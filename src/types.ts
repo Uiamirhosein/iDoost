@@ -76,3 +76,24 @@ export interface ClosedChatRecord {
 
 export type ActiveTab = 'explore' | 'history' | 'profile';
 
+export interface IcebreakerOption {
+  id: number;
+  text: string;
+}
+
+export interface IcebreakerQuestion {
+  id: string;
+  category: string;
+  prompt: string;
+  options: IcebreakerOption[];
+}
+
+export interface IcebreakerSessionData {
+  match_id: string;
+  question: IcebreakerQuestion;
+  is_user1: boolean;
+  my_choice: number | null;
+  partner_choice: number | null;
+  status: 'VOTING' | 'COMPLETED' | 'EXPIRED';
+}
+

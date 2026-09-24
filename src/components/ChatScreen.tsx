@@ -40,6 +40,7 @@ interface ChatScreenProps {
   connectedAt?: number;
   chatSessionId?: string;
   isClosedByPartner?: boolean;
+  prefilledPrompt?: string;
   onMessagesChange?: (messages: ChatMessage[]) => void;
   onBack: () => void;
   onCloseChat?: (
@@ -64,6 +65,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   connectedAt,
   chatSessionId,
   isClosedByPartner = false,
+  prefilledPrompt,
   onMessagesChange,
   onBack,
   onCloseChat,
@@ -151,7 +153,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     ];
   });
 
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState(prefilledPrompt || '');
+
+  // Update input text if prefilledPrompt changes from Icebreaker Quick Action
+  useEffect(() => {
+    if (prefilledPrompt) {
+      setInputText(prefilledPrompt);
+    }
+  }, [prefilledPrompt]);
   const [isTyping, setIsTyping] = useState(false);
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -541,7 +550,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
         {/* 3. Input Footer */}
         <footer className="p-3 bg-[#10111a]/95 backdrop-blur-md border-t border-white/[0.08] shrink-0 z-20">
-          {isClosedByPartner ? (
+          {/* Quick Action Suggestion Chip above Input */}
+        {!isClosedByPartner && prefilledPrompt && inputText === prefilledPrompt && (
+          <div className="mb-2 flex items-center justify-between gap-2 p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-200 text-[11px]">
+            <span className="truncate">💡 پیام پیشنهادی آماده ارسال: «{prefilledPrompt}»</span>
+            <button
+              type="button"
+              onClick={() => handleSend()}
+              className="px-2.5 py-1 rounded-lg bg-purple-500 text-white font-bold shrink-0 shadow-sm active:scale-95"
+            >
+              ارسال فوری
+            </button>
+          </div>
+        )}
+
+        {isClosedByPartner ? (
             <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
               <div className="flex items-center gap-2">
                 <DoorClosed className="w-4 h-4 text-amber-400 shrink-0" />
