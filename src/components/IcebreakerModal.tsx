@@ -162,10 +162,38 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
   const mySelectedOption = question.options.find((o) => o.id === myChoice);
   const partnerSelectedOption = question.options.find((o) => o.id === partnerChoice);
 
-  // Verdict Copywriting (Slang-heavy Persian Twitter style)
-  const quickActionText = isAgreed
-    ? 'دقیقاً حق خالص بود! توام سر این ماجرا زخمی شدی؟ 😂'
-    : 'ناموساً چطور تونستی اونو انتخاب کنی؟! مگه داریم؟! 💀';
+  // Dynamic, authentic & personalized copy for each user (so both sides get distinct, human replies)
+  const isUser1 = session?.is_user1 ?? true;
+
+  const quickActionText = React.useMemo(() => {
+    if (isAgreed) {
+      const agreedOptionsUser1 = [
+        'پشمام جفتمون همینو زدیم! دقیقاً سر این حرکت که گفتی بارها قاطی کردم 😂',
+        'دمت گرم واقعاً حق خالص بود! حس کردم فقط منم که از این قضیه فشار می‌خورم 🤝',
+        'وای دقیقاً! یعنی از صد فرسخی این حرکتو ببینم فرار می‌کنم، خوب شد هم‌نظریم 🌿',
+      ];
+      const agreedOptionsUser2 = [
+        'ناموساً فکر نمی‌کردم یکی دیگه هم مثل خودم سر این حرکت انقدر حرص بخوره 😂 چطوری؟',
+        'قشنگ معلومه جفتمون از یه قماشیم! این دقیقاً خط قرمز اعصاب منم بود ✌️',
+        'ایول هم‌فرکانس دراومدیم! بگو ببینم سر این ماجرا خاطره سم هم داری یا چی؟ ☕',
+      ];
+      const pool = isUser1 ? agreedOptionsUser1 : agreedOptionsUser2;
+      return pool[Math.abs((matchId.charCodeAt(0) || 0) + (myChoice || 1)) % pool.length];
+    } else {
+      const conflictOptionsUser1 = [
+        'نه خدایی جدی زدی اون یکی؟! یعنی حرکت من رو اعصاب‌تر نبود به نظرت؟ 💀',
+        'با احترام ولی کاملاً با انتخابت مخالفم! مگه داریم بدتر از گزینه‌ای که من زدم؟! 😂',
+        'شروع نشده اختلاف افتاد بینمون! بیا منطقی بحث کنیم سر این قضیه ببینم چطور به اون رسیدی ☕',
+      ];
+      const conflictOptionsUser2 = [
+        'ناموساً چطور دستت رفت اون یکی رو انتخاب کنی؟! اون که اوج سمه 💀',
+        'پشمام سلیقه‌هامون چپه دراومد! ولی جدی من سر گزینه‌ای که زدم زخمی شدم رفیق 😂',
+        'شروع پرچالشی شد! باید قانعم کنی چرا به نظر تو اون قضیه بدتر بود تا باهم کنار بیایم 🌿',
+      ];
+      const pool = isUser1 ? conflictOptionsUser1 : conflictOptionsUser2;
+      return pool[Math.abs((matchId.charCodeAt(1) || 0) + (myChoice || 2)) % pool.length];
+    }
+  }, [isAgreed, isUser1, matchId, myChoice]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" dir="rtl">

@@ -314,6 +314,7 @@ export async function fetchSessionMessages(
       minute: '2-digit',
     }),
     status: msg.status || 'sent',
+    replyTo: msg.reply_to || undefined,
   }));
 }
 
@@ -323,16 +324,23 @@ export async function fetchSessionMessages(
 export async function sendChatMessage(
   sessionId: string,
   senderId: string,
-  text: string
+  text: string,
+  replyTo?: { id: string; text: string; senderName?: string }
 ): Promise<ChatMessage | null> {
+  const insertPayload: any = {
+    chat_session_id: sessionId,
+    sender_id: senderId,
+    text: text.trim(),
+    status: 'sent',
+  };
+
+  if (replyTo) {
+    insertPayload.reply_to = replyTo;
+  }
+
   const { data, error } = await supabase
     .from('messages')
-    .insert({
-      chat_session_id: sessionId,
-      sender_id: senderId,
-      text: text.trim(),
-      status: 'sent',
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
@@ -350,6 +358,7 @@ export async function sendChatMessage(
       minute: '2-digit',
     }),
     status: data.status,
+    replyTo: data.reply_to || undefined,
   };
 }
 
@@ -387,6 +396,7 @@ export function subscribeToChatMessages(
               minute: '2-digit',
             }),
             status: msg.status || 'sent',
+            replyTo: msg.reply_to || undefined,
           });
         }
       }
@@ -420,6 +430,7 @@ export function subscribeToChatMessages(
             minute: '2-digit',
           }),
           status: msg.status || 'sent',
+          replyTo: msg.reply_to || undefined,
         };
 
         onNewMessage(chatMsg);

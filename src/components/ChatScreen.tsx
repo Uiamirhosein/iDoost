@@ -25,6 +25,7 @@ import {
   Zap,
   DoorOpen,
   DoorClosed,
+  Reply,
 } from 'lucide-react';
 import { UserProfile, ChatMessage } from '../types';
 import { persianNumber, formatDistance } from '../utils/persianNumbers';
@@ -32,6 +33,7 @@ import { OnlineBadge } from './OnlineBadge';
 import { EndChatFeedbackModal } from './EndChatFeedbackModal';
 import { FloatingXpFlyer } from './FloatingXpFlyer';
 import { UserAvatar } from './UserAvatar';
+import { triggerHaptic } from '../lib/telegram';
 
 interface ChatScreenProps {
   user?: UserProfile;
@@ -52,7 +54,7 @@ interface ChatScreenProps {
   onOpenPaywallForTelegram?: () => void;
   onTriggerPaywall?: () => void;
   isPro?: boolean;
-  onSendMessage?: (text: string) => void;
+  onSendMessage?: (text: string, replyTo?: { id: string; text: string; senderName?: string }) => void;
   onBlockUser?: (userId: string) => void;
   onReportUser?: (userId: string, reason: string) => void;
   onAddXP?: (xp: number) => void;
@@ -161,6 +163,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       setInputText(prefilledPrompt);
     }
   }, [prefilledPrompt]);
+  const [replyingMessage, setReplyingMessage] = useState<ChatMessage | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -197,10 +200,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     if (!inputText.trim()) return;
 
     const sentText = inputText.trim();
+    const currentReply = replyingMessage
+      ? {
+          id: replyingMessage.id,
+          text: replyingMessage.text,
+          senderName: replyingMessage.senderId === 'me' ? 'شما' : user.name,
+        }
+      : undefined;
+
     setInputText('');
+    setReplyingMessage(null);
 
     if (onSendMessage) {
-      onSendMessage(sentText);
+      onSendMessage(sentText, currentReply);
       return;
     }
 
@@ -213,6 +225,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         minute: '2-digit',
       }),
       status: 'sent',
+      replyTo: currentReply,
     };
 
     setMessages((prev) => {
@@ -495,7 +508,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </div>
         </div>
 
-        {/* Messages List */}
+        {/* Messages List with Swipe-to-Reply */}
         {messages.map((msg) => {
           const isMe = msg.senderId === 'me';
           return (
@@ -504,27 +517,62 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               initial={{ opacity: 0, y: 10, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.2 }}
-              className={`flex flex-col ${isMe ? 'items-start' : 'items-end'}`}
+              className={`flex flex-col relative ${isMe ? 'items-start' : 'items-end'}`}
             >
-              <div
-                className={`max-w-[80%] rounded-[20px] px-3.5 py-2.5 text-xs leading-relaxed shadow-sm ${
-                  isMe
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-none'
-                    : 'bg-[#181926] text-white/90 border border-white/[0.08] rounded-bl-none'
-                }`}
+              {/* Swipeable container */}
+              <motion.div
+                drag="x"
+                dragConstraints={{ left: -75, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -45) {
+                    triggerHaptic('light');
+                    setReplyingMessage(msg);
+                  }
+                }}
+                className="max-w-[85%] relative flex items-center"
               >
-                <p className="whitespace-pre-wrap select-text">{msg.text}</p>
+                {/* Visual reply icon revealed on swipe left */}
+                <div className="absolute -left-8 text-purple-400 opacity-60">
+                  <Reply className="w-4 h-4" />
+                </div>
+
                 <div
-                  className={`flex items-center gap-1 mt-1 text-[10px] ${
-                    isMe ? 'text-white/65 justify-end' : 'text-white/45 justify-start'
+                  className={`w-full rounded-[20px] px-3.5 py-2.5 text-xs leading-relaxed shadow-sm ${
+                    isMe
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-none'
+                      : 'bg-[#181926] text-white/90 border border-white/[0.08] rounded-bl-none'
                   }`}
                 >
-                  <span>{persianNumber(msg.timestamp)}</span>
-                  {isMe && (
-                    <CheckCheck className="w-3 h-3 text-sky-300" />
+                  {/* Quoted Reply Header if this message replies to an older one */}
+                  {msg.replyTo && (
+                    <div
+                      className={`mb-1.5 p-2 rounded-xl text-[11px] border-r-2 text-right ${
+                        isMe
+                          ? 'bg-black/20 border-white/80 text-white/90'
+                          : 'bg-white/5 border-purple-400 text-white/80'
+                      }`}
+                    >
+                      <span className="font-bold text-[10px] text-purple-200 block mb-0.5">
+                        {msg.replyTo.senderName || 'پاسخ به'}:
+                      </span>
+                      <p className="line-clamp-1 opacity-80">{msg.replyTo.text}</p>
+                    </div>
                   )}
+
+                  <p className="whitespace-pre-wrap select-text">{msg.text}</p>
+                  <div
+                    className={`flex items-center gap-1 mt-1 text-[10px] ${
+                      isMe ? 'text-white/65 justify-end' : 'text-white/45 justify-start'
+                    }`}
+                  >
+                    <span>{persianNumber(msg.timestamp)}</span>
+                    {isMe && (
+                      <CheckCheck className="w-3 h-3 text-sky-300" />
+                    )}
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           );
         })}
@@ -550,7 +598,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
         {/* 3. Input Footer */}
         <footer className="p-3 bg-[#10111a]/95 backdrop-blur-md border-t border-white/[0.08] shrink-0 z-20">
-          {/* Quick Action Suggestion Chip above Input */}
+          {/* Active Reply Banner */}
+        {replyingMessage && !isClosedByPartner && (
+          <div className="mb-2 p-2.5 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <Reply className="w-4 h-4 text-purple-400 shrink-0" />
+              <div className="min-w-0 text-right">
+                <span className="font-bold text-[10px] text-purple-300 block">
+                  پاسخ به {replyingMessage.senderId === 'me' ? 'خودتان' : user.name}:
+                </span>
+                <p className="text-[11px] text-white/80 truncate">{replyingMessage.text}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyingMessage(null)}
+              className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white shrink-0 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Quick Action Suggestion Chip above Input */}
         {!isClosedByPartner && prefilledPrompt && inputText === prefilledPrompt && (
           <div className="mb-2 flex items-center justify-between gap-2 p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-200 text-[11px]">
             <span className="truncate">💡 پیام پیشنهادی آماده ارسال: «{prefilledPrompt}»</span>

@@ -429,7 +429,10 @@ export default function App() {
   };
 
   // Action 3.1: Send Message to Supabase & Realtime Broadcast
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (
+    text: string,
+    replyTo?: { id: string; text: string; senderName?: string }
+  ) => {
     if (!text.trim()) return;
 
     if (activeChatSessionId) {
@@ -443,10 +446,16 @@ export default function App() {
           minute: '2-digit',
         }),
         status: 'sent',
+        replyTo,
       };
       setActiveChatMessages((prev) => [...prev, optimisticMsg]);
 
-      const sent = await sendChatMessage(activeChatSessionId, currentUser.id, text.trim());
+      const sent = await sendChatMessage(
+        activeChatSessionId,
+        currentUser.id,
+        text.trim(),
+        replyTo
+      );
       if (sent) {
         setActiveChatMessages((prev) =>
           prev.map((m) => (m.id === tempId ? sent : m))

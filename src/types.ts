@@ -51,6 +51,11 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   status?: 'sent' | 'delivered' | 'read';
+  replyTo?: {
+    id: string;
+    text: string;
+    senderName?: string;
+  };
 }
 
 export interface MatchItem {
