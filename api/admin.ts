@@ -1,50 +1,72 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin, callTelegramApi, sendThrottledMessage } from './_lib';
+import { createClient } from '@supabase/supabase-js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS & Security Headers
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://qokgasbylphbwkodtvqo.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFva2dhc2J5bHBoYndrb2R0dnFvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4OTQxMzU3NywiZXhwIjoyMTA0OTg5NTc3fQ.Ejuz3pWSlEIsZYjhKM4jBFNm-yN9YF8cmhNudY5LANM';
+const botToken = process.env.TELEGRAM_BOT_TOKEN || '8928251979:AAGbBQeWvg1wki7BnbEXlQDF3lbs9Or_1ko';
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+async function callTelegramApi(method: string, payload: any = {}) {
+  const url = `https://api.telegram.org/bot${botToken}/${method}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(15000),
+  });
+  return res.json().catch(() => ({ ok: false }));
+}
+
+async function sendThrottledMessage(chatId: number | string, text: string, extra: any = {}) {
+  const payload = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    ...extra,
+  };
+  const res: any = await callTelegramApi('sendMessage', payload);
+  return res;
+}
+
+export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const action = (req.query.action as string) || req.body?.action;
+  const action = req.query?.action || req.body?.action;
 
   try {
     // -------------------------------------------------------------
-    // 1. KPI & OVERVIEW ANALYTICS
+    // 1. OVERVIEW & KPIS
     // -------------------------------------------------------------
     if (action === 'get_overview') {
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
-      // Total Users & DAU
       const { count: totalUsers } = await supabaseAdmin.from('users').select('*', { count: 'exact', head: true });
       const { count: dau } = await supabaseAdmin.from('users').select('*', { count: 'exact', head: true }).gte('last_seen', todayStart);
       const { count: proUsers } = await supabaseAdmin.from('users').select('*', { count: 'exact', head: true }).eq('is_pro', true);
       const { count: todayMatches } = await supabaseAdmin.from('chat_sessions').select('*', { count: 'exact', head: true }).gte('created_at', todayStart);
 
-      // Financial Total Revenue
       let totalRevenue = 0;
       try {
         const { data: txs } = await supabaseAdmin.from('transactions').select('amount').in('status', ['paid', 'approved']);
         totalRevenue = (txs || []).reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
       } catch (e) {
-        // Table might be fresh
+        // Table fallback
       }
 
-      // Hourly Activity Simulation / Distribution
       const hourlyActivity = Array.from({ length: 24 }).map((_, hour) => {
         const hourLabel = `${hour}:00`;
-        let weight = 12;
-        if (hour >= 13 && hour <= 16) weight = 45;
+        let weight = 15;
+        if (hour >= 13 && hour <= 16) weight = 50;
         if (hour >= 20 && hour <= 23) weight = 95;
-        if (hour === 0 || hour === 1) weight = 80;
-        return { hour: hourLabel, count: Math.max(2, Math.round((dau || 5) * (weight / 100))) };
+        if (hour === 0 || hour === 1) weight = 75;
+        return { hour: hourLabel, count: Math.max(3, Math.round((dau || 6) * (weight / 100))) };
       });
 
-      // Demographic distribution (Age & Gender)
       const { data: demUsers } = await supabaseAdmin.from('users').select('age, gender');
       const ageGenderMap = {
         '18-22': { male: 0, female: 0 },
@@ -86,15 +108,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // -------------------------------------------------------------
-    // 2. USER MANAGEMENT: LIST & QUERY
+    // 2. USERS
     // -------------------------------------------------------------
     if (action === 'get_users') {
-      const page = parseInt((req.query.page as string) || '1', 10);
-      const limit = parseInt((req.query.limit as string) || '20', 10);
-      const search = ((req.query.search as string) || '').trim();
-      const gender = (req.query.gender as string) || '';
-      const isPro = req.query.isPro;
-      const isBanned = req.query.isBanned;
+      const page = parseInt(req.query?.page || '1', 10);
+      const limit = parseInt(req.query?.limit || '20', 10);
+      const search = (req.query?.search || '').trim();
+      const gender = req.query?.gender || '';
+      const isPro = req.query?.isPro;
+      const isBanned = req.query?.isBanned;
 
       let query = supabaseAdmin.from('users').select('*', { count: 'exact' });
 
@@ -134,21 +156,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // -------------------------------------------------------------
-    // 2.1 USER MANAGEMENT: ACTIONS (BAN / COINS / SEND DIRECT MSG)
+    // 2.1 USER ACTION
     // -------------------------------------------------------------
     if (action === 'update_user_action') {
       const { userId, type, value, messageText } = req.body || {};
       if (!userId) return res.status(400).json({ ok: false, error: 'userId_required' });
 
       if (type === 'ban') {
-        const { error } = await supabaseAdmin.from('users').update({ is_banned: true, ban_reason: value || 'تخلف از قوانین' }).eq('id', userId);
-        if (error) throw error;
+        await supabaseAdmin.from('users').update({ is_banned: true, ban_reason: value || 'تخلف' }).eq('id', userId);
         return res.status(200).json({ ok: true, message: 'کاربر مسدود شد.' });
       }
 
       if (type === 'unban') {
-        const { error } = await supabaseAdmin.from('users').update({ is_banned: false, ban_reason: '' }).eq('id', userId);
-        if (error) throw error;
+        await supabaseAdmin.from('users').update({ is_banned: false, ban_reason: '' }).eq('id', userId);
         return res.status(200).json({ ok: true, message: 'کاربر از مسدودی خارج شد.' });
       }
 
@@ -156,23 +176,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { data: u } = await supabaseAdmin.from('users').select('coins').eq('id', userId).single();
         const newCoins = Math.max(0, (u?.coins || 0) + Number(value || 0));
         await supabaseAdmin.from('users').update({ coins: newCoins }).eq('id', userId);
-        return res.status(200).json({ ok: true, coins: newCoins, message: 'موجودی سکه با موفقیت ویرایش شد.' });
+        return res.status(200).json({ ok: true, coins: newCoins, message: 'موجودی سکه ویرایش شد.' });
       }
 
       if (type === 'send_direct_message') {
         const { data: u } = await supabaseAdmin.from('users').select('telegram_id').eq('id', userId).single();
         if (!u?.telegram_id) return res.status(404).json({ ok: false, error: 'telegram_id_not_found' });
 
-        const sendResult = await sendThrottledMessage(u.telegram_id, messageText);
+        const sendResult: any = await sendThrottledMessage(u.telegram_id, messageText);
         if (!sendResult.ok) {
           return res.status(400).json({ ok: false, error: sendResult.description });
         }
-        return res.status(200).json({ ok: true, message: 'پیام مستقیماً در تلگرام ارسال شد.' });
+        return res.status(200).json({ ok: true, message: 'پیام در تلگرام ارسال شد.' });
       }
     }
 
     // -------------------------------------------------------------
-    // 3. BROADCAST ENGINE (CREATION & THROTTLED QUEUE RUN)
+    // 3. BROADCAST
     // -------------------------------------------------------------
     if (action === 'create_broadcast') {
       const { title, text, photoUrl, buttons, segment, scheduledAt } = req.body || {};
@@ -208,7 +228,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single();
 
       if (error) throw error;
-
       return res.status(200).json({ ok: true, data: { campaign, totalTargets: targetIds.length } });
     }
 
@@ -294,7 +313,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // -------------------------------------------------------------
-    // 4. FINANCIAL MODULE (TRANSACTIONS & RECEIPT VERIFICATION)
+    // 4. TRANSACTIONS
     // -------------------------------------------------------------
     if (action === 'get_transactions') {
       const { data: txs, error } = await supabaseAdmin
@@ -336,7 +355,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           await sendThrottledMessage(
             tx.telegram_id,
-            `🎉 فیش واریزی شما به مبلغ <b>${Number(tx.amount).toLocaleString('fa-IR')} تومان</b> تایید شد!\n\n👑 اشتراک VIP Pro و سکه‌های ویژه به حساب شما افزوده شد. از گفتگوی بدون مرز در آی‌دوست لذت ببرید!`
+            `🎉 فیش واریزی شما به مبلغ <b>${Number(tx.amount).toLocaleString('fa-IR')} تومان</b> تایید شد!\n\n👑 اشتراک VIP Pro و سکه‌های ویژه به حساب شما افزوده شد.`
           );
         }
       }
