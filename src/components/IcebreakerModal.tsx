@@ -40,7 +40,7 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
   const [myChoice, setMyChoice] = useState<number | null>(null);
   const [partnerChoice, setPartnerChoice] = useState<number | null>(null);
   const [status, setStatus] = useState<'VOTING' | 'COMPLETED' | 'EXPIRED'>('VOTING');
-  const [timeLeft, setTimeLeft] = useState<number>(20);
+  const [timeLeft, setTimeLeft] = useState<number>(60);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showVerdict, setShowVerdict] = useState<boolean>(false);
 
@@ -53,7 +53,7 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
     if (!isOpen || !matchId) return;
 
     let isMounted = true;
-    setTimeLeft(20);
+    setTimeLeft(60);
     setShowVerdict(false);
 
     getOrInitIcebreaker(matchId, currentUserId).then((data) => {
@@ -103,7 +103,7 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
     }
   }, [myChoice, partnerChoice, showVerdict]);
 
-  // 4. 20-Second circular countdown timer
+  // 4. 60-Second circular countdown timer (1 minute)
   useEffect(() => {
     if (!isOpen || showVerdict) return;
 
