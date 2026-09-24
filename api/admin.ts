@@ -363,6 +363,111 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true, message: status === 'approved' ? 'تراکنش تایید شد.' : 'تراکنش رد شد.' });
     }
 
+    // -------------------------------------------------------------
+    // 5. ICEBREAKER (ROOM OF HATE) QUESTIONS & CHIP SUGGESTIONS CRUD
+    // -------------------------------------------------------------
+    if (action === 'get_icebreaker_data') {
+      const { data: questions } = await supabaseAdmin
+        .from('icebreaker_questions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const { data: chips } = await supabaseAdmin
+        .from('icebreaker_chip_suggestions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      return res.status(200).json({
+        ok: true,
+        data: {
+          questions: questions || [],
+          chips: chips || [],
+        },
+      });
+    }
+
+    if (action === 'save_icebreaker_question') {
+      const { id, category, prompt, options, is_active } = req.body || {};
+      if (!prompt || !options || !Array.isArray(options) || options.length < 2) {
+        return res.status(400).json({ ok: false, error: 'invalid_question_data' });
+      }
+
+      if (id) {
+        const { error } = await supabaseAdmin
+          .from('icebreaker_questions')
+          .update({
+            category: category || 'daily_cringe',
+            prompt,
+            options,
+            is_active: is_active ?? true,
+          })
+          .eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true, message: 'سوال با موفقیت ویرایش شد.' });
+      } else {
+        const { error } = await supabaseAdmin
+          .from('icebreaker_questions')
+          .insert({
+            category: category || 'daily_cringe',
+            prompt,
+            options,
+            is_active: is_active ?? true,
+          });
+        if (error) throw error;
+        return res.status(200).json({ ok: true, message: 'سوال جدید با موفقیت اضافه شد.' });
+      }
+    }
+
+    if (action === 'delete_icebreaker_question') {
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ ok: false, error: 'id_required' });
+
+      const { error } = await supabaseAdmin.from('icebreaker_questions').delete().eq('id', id);
+      if (error) throw error;
+      return res.status(200).json({ ok: true, message: 'سوال حذف شد.' });
+    }
+
+    if (action === 'save_chip_suggestion') {
+      const { id, type, text, user_target, is_active } = req.body || {};
+      if (!text || !type) {
+        return res.status(400).json({ ok: false, error: 'text_and_type_required' });
+      }
+
+      if (id) {
+        const { error } = await supabaseAdmin
+          .from('icebreaker_chip_suggestions')
+          .update({
+            type, // 'agreed' or 'conflict'
+            text: text.trim(),
+            user_target: user_target || 'all',
+            is_active: is_active ?? true,
+          })
+          .eq('id', id);
+        if (error) throw error;
+        return res.status(200).json({ ok: true, message: 'پیام پیشنهادی ویرایش شد.' });
+      } else {
+        const { error } = await supabaseAdmin
+          .from('icebreaker_chip_suggestions')
+          .insert({
+            type,
+            text: text.trim(),
+            user_target: user_target || 'all',
+            is_active: is_active ?? true,
+          });
+        if (error) throw error;
+        return res.status(200).json({ ok: true, message: 'پیام پیشنهادی جدید افزوده شد.' });
+      }
+    }
+
+    if (action === 'delete_chip_suggestion') {
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ ok: false, error: 'id_required' });
+
+      const { error } = await supabaseAdmin.from('icebreaker_chip_suggestions').delete().eq('id', id);
+      if (error) throw error;
+      return res.status(200).json({ ok: true, message: 'پیام پیشنهادی حذف شد.' });
+    }
+
     return res.status(400).json({ ok: false, error: 'unknown_action' });
   } catch (err: any) {
     console.error('Admin API error:', err);

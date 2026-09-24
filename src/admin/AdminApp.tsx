@@ -9,11 +9,13 @@ import {
   ExternalLink,
   ShieldCheck,
   Lock,
+  Flame,
 } from 'lucide-react';
 import { AdminOverview } from './AdminOverview';
 import { AdminUsers } from './AdminUsers';
 import { AdminBroadcast } from './AdminBroadcast';
 import { AdminFinance } from './AdminFinance';
+import { AdminIcebreaker } from './AdminIcebreaker';
 import { fetchAdminApi, ADMIN_AUTH_SECRET } from './adminApi';
 
 export const AdminApp: React.FC = () => {
@@ -28,8 +30,8 @@ export const AdminApp: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState(false);
 
-  // Active Tab: 'overview' | 'users' | 'broadcast' | 'finance'
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'broadcast' | 'finance'>('overview');
+  // Active Tab: 'overview' | 'users' | 'broadcast' | 'finance' | 'icebreaker'
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'broadcast' | 'finance' | 'icebreaker'>('overview');
 
   // Overview Data
   const [overviewData, setOverviewData] = useState<any>(null);
@@ -46,6 +48,11 @@ export const AdminApp: React.FC = () => {
   // Finance Data
   const [transactions, setTransactions] = useState<any[]>([]);
   const [financeLoading, setFinanceLoading] = useState<boolean>(false);
+
+  // Icebreaker Data
+  const [icebreakerQuestions, setIcebreakerQuestions] = useState<any[]>([]);
+  const [icebreakerChips, setIcebreakerChips] = useState<any[]>([]);
+  const [icebreakerLoading, setIcebreakerLoading] = useState<boolean>(false);
 
   // Login handler
   const handleLogin = (e: React.FormEvent) => {
@@ -97,12 +104,24 @@ export const AdminApp: React.FC = () => {
     setFinanceLoading(false);
   };
 
+  // Load Icebreaker Data
+  const loadIcebreaker = async () => {
+    setIcebreakerLoading(true);
+    const res = await fetchAdminApi('get_icebreaker_data');
+    if (res.ok) {
+      setIcebreakerQuestions(res.data.questions || []);
+      setIcebreakerChips(res.data.chips || []);
+    }
+    setIcebreakerLoading(false);
+  };
+
   // Initial tab loading
   useEffect(() => {
     if (!isAuthenticated) return;
     if (activeTab === 'overview') loadOverview();
     if (activeTab === 'users') loadUsers();
     if (activeTab === 'finance') loadFinance();
+    if (activeTab === 'icebreaker') loadIcebreaker();
   }, [isAuthenticated, activeTab]);
 
   // If unauthenticated, show sleek Dark Admin Gate
@@ -189,6 +208,7 @@ export const AdminApp: React.FC = () => {
           {[
             { id: 'overview', title: 'داشبورد تحلیلی', icon: LayoutDashboard },
             { id: 'users', title: 'مدیریت کاربران', icon: Users },
+            { id: 'icebreaker', title: 'اتاق نفرت مشترک (Icebreaker)', icon: Flame },
             { id: 'broadcast', title: 'ارسال همگانی (Broadcast)', icon: Radio },
             { id: 'finance', title: 'مدیریت مالی و فیش‌ها', icon: CreditCard },
           ].map((tab) => {
@@ -236,6 +256,15 @@ export const AdminApp: React.FC = () => {
                 setUsersPage(1);
                 loadUsers(1, f);
               }}
+            />
+          )}
+
+          {activeTab === 'icebreaker' && (
+            <AdminIcebreaker
+              questions={icebreakerQuestions}
+              chips={icebreakerChips}
+              loading={icebreakerLoading}
+              onRefresh={loadIcebreaker}
             />
           )}
 

@@ -776,6 +776,45 @@ export async function unblockUser(userId: string, targetUserId: string): Promise
 }
 
 /**
+ * Fetches active icebreaker chip suggestions from Supabase
+ */
+export async function fetchIcebreakerChipSuggestions(): Promise<{
+  agreed: { user1: string[]; user2: string[] };
+  conflict: { user1: string[]; user2: string[] };
+}> {
+  try {
+    const { data } = await supabase
+      .from('icebreaker_chip_suggestions')
+      .select('*')
+      .eq('is_active', true);
+
+    const result = {
+      agreed: { user1: [] as string[], user2: [] as string[] },
+      conflict: { user1: [] as string[], user2: [] as string[] },
+    };
+
+    if (data && data.length > 0) {
+      data.forEach((row: any) => {
+        const t = row.type === 'conflict' ? 'conflict' : 'agreed';
+        if (row.user_target === 'user1' || row.user_target === 'all') {
+          result[t].user1.push(row.text);
+        }
+        if (row.user_target === 'user2' || row.user_target === 'all') {
+          result[t].user2.push(row.text);
+        }
+      });
+    }
+
+    return result;
+  } catch (err) {
+    return {
+      agreed: { user1: [], user2: [] },
+      conflict: { user1: [], user2: [] },
+    };
+  }
+}
+
+/**
  * Initializes or fetches existing match icebreaker session
  */
 export async function getOrInitIcebreaker(

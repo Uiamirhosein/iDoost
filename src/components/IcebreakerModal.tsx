@@ -19,6 +19,7 @@ import {
   getOrInitIcebreaker,
   submitIcebreakerChoice,
   subscribeToIcebreakerUpdates,
+  fetchIcebreakerChipSuggestions,
 } from '../lib/supabase';
 
 interface IcebreakerModalProps {
@@ -43,6 +44,17 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
   const [timeLeft, setTimeLeft] = useState<number>(60);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showVerdict, setShowVerdict] = useState<boolean>(false);
+  const [dbSuggestions, setDbSuggestions] = useState<{
+    agreed: { user1: string[]; user2: string[] };
+    conflict: { user1: string[]; user2: string[] };
+  } | null>(null);
+
+  // Load chip suggestions dynamically from Supabase
+  useEffect(() => {
+    fetchIcebreakerChipSuggestions().then((sug) => {
+      setDbSuggestions(sug);
+    });
+  }, []);
 
   const cleanPartnerName = getSanitizedName(partnerName, 'این دوستمون');
   const onFinishRef = useRef(onFinish);
@@ -114,34 +126,42 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
   const isUser1 = session?.is_user1 ?? true;
 
   const quickActionText = React.useMemo(() => {
+    // 1. Fallback built-in pool
+    const defaultAgreedU1 = [
+      'پشمام جفتمون همینو زدیم! دقیقاً سر این حرکت که گفتی بارها قاطی کردم 😂',
+      'دمت گرم واقعاً حق خالص بود! حس کردم فقط منم که از این قضیه فشار می‌خورم 🤝',
+      'وای دقیقاً! یعنی از صد فرسخی این حرکتو ببینم فرار می‌کنم، خوب شد هم‌نظریم 🌿',
+    ];
+    const defaultAgreedU2 = [
+      'ناموساً فکر نمی‌کردم یکی دیگه هم مثل خودم سر این حرکت انقدر حرص بخوره 😂 چطوری؟',
+      'قشنگ معلومه جفتمون از یه قماشیم! این دقیقاً خط قرمز اعصاب منم بود ✌️',
+      'ایول هم‌فرکانس دراومدیم! بگو ببینم سر این ماجرا خاطره سم هم داری یا چی؟ ☕',
+    ];
+    const defaultConflictU1 = [
+      'نه خدایی جدی زدی اون یکی؟! یعنی حرکت من رو اعصاب‌تر نبود به نظرت؟ 💀',
+      'با احترام ولی کاملاً با انتخابت مخالفم! مگه داریم بدتر از گزینه‌ای که من زدم؟! 😂',
+      'شروع نشده اختلاف افتاد بینمون! بیا منطقی بحث کنیم سر این قضیه ببینم چطور به اون رسیدی ☕',
+    ];
+    const defaultConflictU2 = [
+      'ناموساً چطور دستت رفت اون یکی رو انتخاب کنی؟! اون که اوج سمه 💀',
+      'پشمام سلیقه‌هامون چپه دراومد! ولی جدی من سر گزینه‌ای که زدم زخمی شدم رفیق 😂',
+      'شروع پرچالشی شد! باید قانعم کنی چرا به نظر تو اون قضیه بدتر بود تا باهم کنار بیایم 🌿',
+    ];
+
     if (isAgreed) {
-      const agreedOptionsUser1 = [
-        'پشمام جفتمون همینو زدیم! دقیقاً سر این حرکت که گفتی بارها قاطی کردم 😂',
-        'دمت گرم واقعاً حق خالص بود! حس کردم فقط منم که از این قضیه فشار می‌خورم 🤝',
-        'وای دقیقاً! یعنی از صد فرسخی این حرکتو ببینم فرار می‌کنم، خوب شد هم‌نظریم 🌿',
-      ];
-      const agreedOptionsUser2 = [
-        'ناموساً فکر نمی‌کردم یکی دیگه هم مثل خودم سر این حرکت انقدر حرص بخوره 😂 چطوری؟',
-        'قشنگ معلومه جفتمون از یه قماشیم! این دقیقاً خط قرمز اعصاب منم بود ✌️',
-        'ایول هم‌فرکانس دراومدیم! بگو ببینم سر این ماجرا خاطره سم هم داری یا چی؟ ☕',
-      ];
-      const pool = isUser1 ? agreedOptionsUser1 : agreedOptionsUser2;
+      let pool = isUser1 ? dbSuggestions?.agreed?.user1 : dbSuggestions?.agreed?.user2;
+      if (!pool || pool.length === 0) {
+        pool = isUser1 ? defaultAgreedU1 : defaultAgreedU2;
+      }
       return pool[Math.abs((matchId.charCodeAt(0) || 0) + (myChoice || 1)) % pool.length];
     } else {
-      const conflictOptionsUser1 = [
-        'نه خدایی جدی زدی اون یکی؟! یعنی حرکت من رو اعصاب‌تر نبود به نظرت؟ 💀',
-        'با احترام ولی کاملاً با انتخابت مخالفم! مگه داریم بدتر از گزینه‌ای که من زدم؟! 😂',
-        'شروع نشده اختلاف افتاد بینمون! بیا منطقی بحث کنیم سر این قضیه ببینم چطور به اون رسیدی ☕',
-      ];
-      const conflictOptionsUser2 = [
-        'ناموساً چطور دستت رفت اون یکی رو انتخاب کنی؟! اون که اوج سمه 💀',
-        'پشمام سلیقه‌هامون چپه دراومد! ولی جدی من سر گزینه‌ای که زدم زخمی شدم رفیق 😂',
-        'شروع پرچالشی شد! باید قانعم کنی چرا به نظر تو اون قضیه بدتر بود تا باهم کنار بیایم 🌿',
-      ];
-      const pool = isUser1 ? conflictOptionsUser1 : conflictOptionsUser2;
+      let pool = isUser1 ? dbSuggestions?.conflict?.user1 : dbSuggestions?.conflict?.user2;
+      if (!pool || pool.length === 0) {
+        pool = isUser1 ? defaultConflictU1 : defaultConflictU2;
+      }
       return pool[Math.abs((matchId.charCodeAt(1) || 0) + (myChoice || 2)) % pool.length];
     }
-  }, [isAgreed, isUser1, matchId, myChoice]);
+  }, [isAgreed, isUser1, matchId, myChoice, dbSuggestions]);
 
   // 3. Check for verdict trigger (when both picked)
   // When both users answered, show verdict for 2.2 seconds and auto-dismiss into chat
