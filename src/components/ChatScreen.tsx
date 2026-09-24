@@ -34,6 +34,7 @@ import { OnlineBadge } from './OnlineBadge';
 import { EndChatFeedbackModal } from './EndChatFeedbackModal';
 import { FloatingXpFlyer } from './FloatingXpFlyer';
 import { UserAvatar } from './UserAvatar';
+import { SwipeableMessageItem } from './SwipeableMessageItem';
 import { triggerHaptic } from '../lib/telegram';
 
 interface ChatScreenProps {
@@ -511,73 +512,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         </div>
 
         {/* Messages List with Swipe-to-Reply */}
-        {messages.map((msg) => {
-          const isMe = msg.senderId === 'me';
-          return (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.2 }}
-              className={`flex flex-col relative ${isMe ? 'items-start' : 'items-end'}`}
-            >
-              {/* Swipeable container */}
-              <motion.div
-                drag="x"
-                dragConstraints={{ left: -75, right: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x < -45) {
-                    triggerHaptic('light');
-                    setReplyingMessage(msg);
-                  }
-                }}
-                className="max-w-[85%] relative flex items-center"
-              >
-                {/* Visual reply icon revealed on swipe left */}
-                <div className="absolute -left-8 text-purple-400 opacity-60">
-                  <Reply className="w-4 h-4" />
-                </div>
-
-                <div
-                  className={`w-full rounded-[20px] px-3.5 py-2.5 text-xs leading-relaxed shadow-sm ${
-                    isMe
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-none'
-                      : 'bg-[#181926] text-white/90 border border-white/[0.08] rounded-bl-none'
-                  }`}
-                >
-                  {/* Quoted Reply Header if this message replies to an older one */}
-                  {msg.replyTo && (
-                    <div
-                      className={`mb-1.5 p-2 rounded-xl text-[11px] border-r-2 text-right ${
-                        isMe
-                          ? 'bg-black/20 border-white/80 text-white/90'
-                          : 'bg-white/5 border-purple-400 text-white/80'
-                      }`}
-                    >
-                      <span className="font-bold text-[10px] text-purple-200 block mb-0.5">
-                        {msg.replyTo.senderName || 'پاسخ به'}:
-                      </span>
-                      <p className="line-clamp-1 opacity-80">{msg.replyTo.text}</p>
-                    </div>
-                  )}
-
-                  <p className="whitespace-pre-wrap select-text">{msg.text}</p>
-                  <div
-                    className={`flex items-center gap-1 mt-1 text-[10px] ${
-                      isMe ? 'text-white/65 justify-end' : 'text-white/45 justify-start'
-                    }`}
-                  >
-                    <span>{persianNumber(msg.timestamp)}</span>
-                    {isMe && (
-                      <CheckCheck className="w-3 h-3 text-sky-300" />
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          );
-        })}
+        {messages.map((msg) => (
+          <SwipeableMessageItem
+            key={msg.id}
+            msg={msg}
+            partnerName={user.name}
+            onReply={(targetMsg) => setReplyingMessage(targetMsg)}
+          />
+        ))}
 
         {/* Typing Bubble */}
         {isTyping && (
