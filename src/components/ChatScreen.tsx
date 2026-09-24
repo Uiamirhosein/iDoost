@@ -26,6 +26,7 @@ import {
   DoorOpen,
   DoorClosed,
   Reply,
+  Send,
 } from 'lucide-react';
 import { UserProfile, ChatMessage } from '../types';
 import { persianNumber, formatDistance } from '../utils/persianNumbers';
@@ -155,12 +156,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     ];
   });
 
-  const [inputText, setInputText] = useState(prefilledPrompt || '');
+  const [inputText, setInputText] = useState('');
+  const [suggestionChip, setSuggestionChip] = useState<string | null>(prefilledPrompt || null);
 
-  // Update input text if prefilledPrompt changes from Icebreaker Quick Action
+  // Update suggestionChip when icebreaker passes text
   useEffect(() => {
     if (prefilledPrompt) {
-      setInputText(prefilledPrompt);
+      setSuggestionChip(prefilledPrompt);
     }
   }, [prefilledPrompt]);
   const [replyingMessage, setReplyingMessage] = useState<ChatMessage | null>(null);
@@ -621,17 +623,53 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         )}
 
         {/* Quick Action Suggestion Chip above Input */}
-        {!isClosedByPartner && prefilledPrompt && inputText === prefilledPrompt && (
-          <div className="mb-2 flex items-center justify-between gap-2 p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-200 text-[11px]">
-            <span className="truncate">💡 پیام پیشنهادی آماده ارسال: «{prefilledPrompt}»</span>
+        {!isClosedByPartner && suggestionChip && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-2.5 p-2 px-3 rounded-2xl bg-gradient-to-r from-purple-950/60 via-[#18192c] to-indigo-950/60 border border-purple-500/30 flex items-center justify-between gap-2 shadow-sm text-xs"
+          >
             <button
               type="button"
-              onClick={() => handleSend()}
-              className="px-2.5 py-1 rounded-lg bg-purple-500 text-white font-bold shrink-0 shadow-sm active:scale-95"
+              onClick={() => {
+                triggerHaptic('light');
+                setInputText(suggestionChip);
+                setSuggestionChip(null);
+              }}
+              className="flex-1 text-right flex items-center gap-1.5 min-w-0 cursor-pointer group"
             >
-              ارسال فوری
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+              <span className="text-[11px] font-bold text-purple-200 truncate group-hover:text-white transition-colors">
+                {suggestionChip}
+              </span>
             </button>
-          </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  const textToSend = suggestionChip;
+                  setSuggestionChip(null);
+                  setInputText('');
+                  if (onSendMessage) {
+                    onSendMessage(textToSend);
+                  }
+                }}
+                className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:opacity-95 text-white font-bold text-[10px] shadow-sm active:scale-95 cursor-pointer flex items-center gap-1"
+              >
+                <Send className="w-3 h-3 -rotate-45" />
+                <span>ارسال</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSuggestionChip(null)}
+                className="w-5 h-5 rounded-full hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </motion.div>
         )}
 
         {isClosedByPartner ? (

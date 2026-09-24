@@ -95,58 +95,6 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
     };
   }, [isOpen, matchId, session?.is_user1]);
 
-  // 3. Check for verdict trigger (when both picked)
-  useEffect(() => {
-    if (myChoice !== null && partnerChoice !== null && !showVerdict) {
-      triggerHaptic('success');
-      setShowVerdict(true);
-    }
-  }, [myChoice, partnerChoice, showVerdict]);
-
-  // 4. 60-Second circular countdown timer (1 minute)
-  useEffect(() => {
-    if (!isOpen || showVerdict) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          // If expired without verdict, auto pick or finish
-          triggerHaptic('warning');
-          setTimeout(() => {
-            onFinishRef.current();
-          }, 300);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isOpen, showVerdict]);
-
-  // Handle Option Select
-  const handleSelectOption = async (optionId: number) => {
-    if (myChoice !== null || isSubmitting) return;
-
-    triggerHaptic('medium');
-    setMyChoice(optionId);
-    setIsSubmitting(true);
-
-    try {
-      const res = await submitIcebreakerChoice(matchId, currentUserId, optionId);
-      if (res && res.status === 'COMPLETED') {
-        setStatus('COMPLETED');
-      }
-    } catch (e) {
-      console.warn('Error submitting choice:', e);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
   // Question & Options
   const question = session?.question || {
     id: 'default',
@@ -194,6 +142,64 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
       return pool[Math.abs((matchId.charCodeAt(1) || 0) + (myChoice || 2)) % pool.length];
     }
   }, [isAgreed, isUser1, matchId, myChoice]);
+
+  // 3. Check for verdict trigger (when both picked)
+  // When both users answered, show verdict for 2.2 seconds and auto-dismiss into chat
+  useEffect(() => {
+    if (myChoice !== null && partnerChoice !== null && !showVerdict) {
+      triggerHaptic('success');
+      setShowVerdict(true);
+
+      const dismissTimer = setTimeout(() => {
+        onFinishRef.current(quickActionText);
+      }, 2200);
+
+      return () => clearTimeout(dismissTimer);
+    }
+  }, [myChoice, partnerChoice, showVerdict, quickActionText]);
+
+  // 4. 60-Second circular countdown timer (1 minute)
+  useEffect(() => {
+    if (!isOpen || showVerdict) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          triggerHaptic('warning');
+          setTimeout(() => {
+            onFinishRef.current();
+          }, 300);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isOpen, showVerdict]);
+
+  // Handle Option Select
+  const handleSelectOption = async (optionId: number) => {
+    if (myChoice !== null || isSubmitting) return;
+
+    triggerHaptic('medium');
+    setMyChoice(optionId);
+    setIsSubmitting(true);
+
+    try {
+      const res = await submitIcebreakerChoice(matchId, currentUserId, optionId);
+      if (res && res.status === 'COMPLETED') {
+        setStatus('COMPLETED');
+      }
+    } catch (e) {
+      console.warn('Error submitting choice:', e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" dir="rtl">
@@ -335,28 +341,17 @@ export const IcebreakerModal: React.FC<IcebreakerModalProps> = ({
               )}
             </p>
 
-            {/* Quick Action One-Tap Chip */}
-            <div className="w-full bg-[#18192a] border border-purple-500/30 rounded-2xl p-3 mb-4 text-right">
-              <span className="text-[10px] text-purple-300 font-bold block mb-1.5 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                <span>اولین پیام آماده (یک‌کلیک برای ارسال):</span>
-              </span>
-              <p className="text-xs font-bold text-white leading-relaxed select-all">
-                {quickActionText}
-              </p>
-            </div>
-
-            {/* Enter Chat Button with the Quick Action text */}
+            {/* Enter Chat Button (Simple and sleek, quickAction passed to chat input chip) */}
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('medium');
                 onFinish(quickActionText);
               }}
-              className="w-full h-12 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-600 hover:opacity-95 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_4px_25px_rgba(168,85,247,0.4)] cursor-pointer active:scale-98 transition-transform"
+              className="w-full h-11 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:opacity-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_4px_20px_rgba(168,85,247,0.35)] cursor-pointer active:scale-98 transition-transform"
             >
-              <Send className="w-4 h-4 -rotate-45" />
-              <span>ارسال همین پیام و ورود به چت 💬</span>
+              <span>ورود به گفت‌وگو</span>
+              <ArrowRight className="w-4 h-4 rotate-180" />
             </button>
           </motion.div>
         )}
