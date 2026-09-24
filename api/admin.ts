@@ -1,6 +1,7 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabaseAdmin, callTelegramApi, sendThrottledMessage } from './_lib';
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS & Security Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -8,7 +9,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const action = req.query.action || req.body?.action;
+  const action = (req.query.action as string) || req.body?.action;
 
   try {
     // -------------------------------------------------------------
@@ -25,18 +26,22 @@ export default async function handler(req: any, res: any) {
       const { count: todayMatches } = await supabaseAdmin.from('chat_sessions').select('*', { count: 'exact', head: true }).gte('created_at', todayStart);
 
       // Financial Total Revenue
-      const { data: txs } = await supabaseAdmin.from('transactions').select('amount').in('status', ['paid', 'approved']);
-      const totalRevenue = (txs || []).reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
+      let totalRevenue = 0;
+      try {
+        const { data: txs } = await supabaseAdmin.from('transactions').select('amount').in('status', ['paid', 'approved']);
+        totalRevenue = (txs || []).reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
+      } catch (e) {
+        // Table might be fresh
+      }
 
       // Hourly Activity Simulation / Distribution
       const hourlyActivity = Array.from({ length: 24 }).map((_, hour) => {
         const hourLabel = `${hour}:00`;
-        // Activity curve matching Iranian dating app peak (20:00 to 01:00)
         let weight = 12;
         if (hour >= 13 && hour <= 16) weight = 45;
         if (hour >= 20 && hour <= 23) weight = 95;
         if (hour === 0 || hour === 1) weight = 80;
-        return { hour: hourLabel, count: Math.max(5, Math.round((dau || 20) * (weight / 100))) };
+        return { hour: hourLabel, count: Math.max(2, Math.round((dau || 5) * (weight / 100))) };
       });
 
       // Demographic distribution (Age & Gender)
@@ -84,10 +89,10 @@ export default async function handler(req: any, res: any) {
     // 2. USER MANAGEMENT: LIST & QUERY
     // -------------------------------------------------------------
     if (action === 'get_users') {
-      const page = parseInt(req.query.page || '1', 10);
-      const limit = parseInt(req.query.limit || '20', 10);
-      const search = (req.query.search || '').trim();
-      const gender = req.query.gender || '';
+      const page = parseInt((req.query.page as string) || '1', 10);
+      const limit = parseInt((req.query.limit as string) || '20', 10);
+      const search = ((req.query.search as string) || '').trim();
+      const gender = (req.query.gender as string) || '';
       const isPro = req.query.isPro;
       const isBanned = req.query.isBanned;
 
@@ -132,10 +137,9 @@ export default async function handler(req: any, res: any) {
     // 2.1 USER MANAGEMENT: ACTIONS (BAN / COINS / SEND DIRECT MSG)
     // -------------------------------------------------------------
     if (action === 'update_user_action') {
-      const { userId, type, value, messageText } = req.body;
+      const { userId, type, value, messageText } = req.body || {};
       if (!userId) return res.status(400).json({ ok: false, error: 'userId_required' });
 
-      // Action: Ban/Unban
       if (type === 'ban') {
         const { error } = await supabaseAdmin.from('users').update({ is_banned: true, ban_reason: value || 'تخلف از قوانین' }).eq('id', userId);
         if (error) throw error;
@@ -148,7 +152,6 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({ ok: true, message: 'کاربر از مسدودی خارج شد.' });
       }
 
-      // Action: Adjust coins
       if (type === 'adjust_coins') {
         const { data: u } = await supabaseAdmin.from('users').select('coins').eq('id', userId).single();
         const newCoins = Math.max(0, (u?.coins || 0) + Number(value || 0));
@@ -156,7 +159,6 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({ ok: true, coins: newCoins, message: 'موجودی سکه با موفقیت ویرایش شد.' });
       }
 
-      // Action: Send direct message via Telegram Bot
       if (type === 'send_direct_message') {
         const { data: u } = await supabaseAdmin.from('users').select('telegram_id').eq('id', userId).single();
         if (!u?.telegram_id) return res.status(404).json({ ok: false, error: 'telegram_id_not_found' });
@@ -173,10 +175,9 @@ export default async function handler(req: any, res: any) {
     // 3. BROADCAST ENGINE (CREATION & THROTTLED QUEUE RUN)
     // -------------------------------------------------------------
     if (action === 'create_broadcast') {
-      const { title, text, photoUrl, buttons, segment, scheduledAt } = req.body;
+      const { title, text, photoUrl, buttons, segment, scheduledAt } = req.body || {};
       if (!text) return res.status(400).json({ ok: false, error: 'text_required' });
 
-      // Target selection
       let targetsQuery = supabaseAdmin.from('users').select('telegram_id').eq('is_banned', false);
       if (segment === 'pro') targetsQuery = targetsQuery.eq('is_pro', true);
       if (segment === 'free') targetsQuery = targetsQuery.eq('is_pro', false);
@@ -212,11 +213,10 @@ export default async function handler(req: any, res: any) {
     }
 
     if (action === 'execute_broadcast_batch') {
-      const { campaignId, batchSize = 25 } = req.body;
+      const { campaignId, batchSize = 25 } = req.body || {};
       const { data: campaign } = await supabaseAdmin.from('broadcast_campaigns').select('*').eq('id', campaignId).single();
       if (!campaign) return res.status(404).json({ ok: false, error: 'campaign_not_found' });
 
-      // Fetch targets for this campaign segment
       let targetsQuery = supabaseAdmin.from('users').select('telegram_id').eq('is_banned', false);
       if (campaign.segment === 'pro') targetsQuery = targetsQuery.eq('is_pro', true);
       if (campaign.segment === 'free') targetsQuery = targetsQuery.eq('is_pro', false);
@@ -241,9 +241,9 @@ export default async function handler(req: any, res: any) {
           extra.reply_markup = { inline_keyboard: campaign.buttons };
         }
 
-        let res: any;
+        let sendRes: any;
         if (campaign.photo_url) {
-          res = await callTelegramApi('sendPhoto', {
+          sendRes = await callTelegramApi('sendPhoto', {
             chat_id: chatId,
             photo: campaign.photo_url,
             caption: campaign.text,
@@ -251,18 +251,17 @@ export default async function handler(req: any, res: any) {
             ...extra,
           });
         } else {
-          res = await sendThrottledMessage(chatId, campaign.text, extra);
+          sendRes = await sendThrottledMessage(chatId, campaign.text, extra);
         }
 
-        if (res.ok) {
+        if (sendRes.ok) {
           sent++;
-        } else if (res.error_code === 403 || res.blocked) {
+        } else if (sendRes.error_code === 403 || sendRes.blocked) {
           blocked++;
         } else {
           failed++;
         }
 
-        // Safe throttle delay 40ms to stay strictly below 30 msgs/second
         await new Promise((r) => setTimeout(r, 45));
       }
 
@@ -309,20 +308,19 @@ export default async function handler(req: any, res: any) {
     }
 
     if (action === 'review_transaction') {
-      const { transactionId, status, adminNote } = req.body;
+      const { transactionId, status, adminNote } = req.body || {};
       const { data: tx } = await supabaseAdmin.from('transactions').select('*').eq('id', transactionId).single();
       if (!tx) return res.status(404).json({ ok: false, error: 'transaction_not_found' });
 
       await supabaseAdmin
         .from('transactions')
         .update({
-          status, // 'approved' or 'rejected'
+          status,
           admin_note: adminNote || '',
           updated_at: new Date().toISOString(),
         })
         .eq('id', transactionId);
 
-      // If approved, grant PRO or Coins to user
       if (status === 'approved' && tx.user_id) {
         const { data: u } = await supabaseAdmin.from('users').select('*').eq('id', tx.user_id).single();
         if (u) {
@@ -336,7 +334,6 @@ export default async function handler(req: any, res: any) {
             })
             .eq('id', tx.user_id);
 
-          // Send approval message to user in Telegram
           await sendThrottledMessage(
             tx.telegram_id,
             `🎉 فیش واریزی شما به مبلغ <b>${Number(tx.amount).toLocaleString('fa-IR')} تومان</b> تایید شد!\n\n👑 اشتراک VIP Pro و سکه‌های ویژه به حساب شما افزوده شد. از گفتگوی بدون مرز در آی‌دوست لذت ببرید!`
