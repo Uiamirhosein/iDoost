@@ -18,15 +18,19 @@ import { fetchAdminApi } from './adminApi';
 interface AdminIcebreakerProps {
   questions: any[];
   chips: any[];
+  isEnabled: boolean;
   loading: boolean;
   onRefresh: () => void;
+  onToggleEnabled: (enabled: boolean) => void;
 }
 
 export const AdminIcebreaker: React.FC<AdminIcebreakerProps> = ({
   questions,
   chips,
+  isEnabled,
   loading,
   onRefresh,
+  onToggleEnabled,
 }) => {
   // Tab state: 'questions' | 'chips'
   const [activeTab, setActiveTab] = useState<'questions' | 'chips'>('questions');
@@ -188,18 +192,42 @@ export const AdminIcebreaker: React.FC<AdminIcebreakerProps> = ({
 
       {/* Header and Switcher */}
       <div className="p-4 rounded-3xl bg-[#141525] border border-white/[0.08] shadow-md flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-purple-500/20 via-pink-500/20 to-amber-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-500/20 via-pink-500/20 to-amber-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
             <Flame className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white">مدیریت اتاق نفرت مشترک (Icebreaker)</h3>
-            <p className="text-[11px] text-white/50">تنظیم بانک سوالات، سناریوها و پیام‌های پیشنهادی اینپوت</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black text-white">مدیریت اتاق نفرت مشترک (Icebreaker)</h3>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                  isEnabled
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                    : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                }`}
+              >
+                {isEnabled ? 'وضعیت: فعال در مینی‌اپ' : 'وضعیت: غیرفعال'}
+              </span>
+            </div>
+            <p className="text-[11px] text-white/50 mt-0.5">تنظیم بانک سوالات، سناریوها و پیام‌های پیشنهادی اینپوت</p>
           </div>
         </div>
 
-        {/* Tab Switcher & Add Button */}
-        <div className="flex items-center gap-2">
+        {/* Global Toggle & Tab Switcher */}
+        <div className="flex items-center flex-wrap gap-2.5">
+          {/* Main Feature On/Off Toggle Button */}
+          <button
+            type="button"
+            onClick={() => onToggleEnabled(!isEnabled)}
+            className={`h-9 px-3.5 rounded-xl border text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 ${
+              isEnabled
+                ? 'bg-rose-500/15 hover:bg-rose-500/25 border-rose-500/30 text-rose-300'
+                : 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-300'
+            }`}
+          >
+            <span>{isEnabled ? '⛔ غیرفعال‌سازی این فیچر' : '✅ فعال‌سازی این فیچر'}</span>
+          </button>
+
           <div className="flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10 text-xs">
             <button
               type="button"
@@ -227,7 +255,7 @@ export const AdminIcebreaker: React.FC<AdminIcebreakerProps> = ({
             className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:opacity-95 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>{activeTab === 'questions' ? 'افزودن سوال جدید' : 'افزودن پیام پیشنهادی'}</span>
+            <span>{activeTab === 'questions' ? 'افزودن سوال' : 'افزودن چیپس'}</span>
           </button>
         </div>
       </div>

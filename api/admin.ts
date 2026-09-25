@@ -377,12 +377,39 @@ export default async function handler(req: any, res: any) {
         .select('*')
         .order('created_at', { ascending: false });
 
+      const { data: setting } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'icebreaker_enabled')
+        .single();
+
+      const isEnabled = setting ? setting.value === true || setting.value === 'true' : true;
+
       return res.status(200).json({
         ok: true,
         data: {
           questions: questions || [],
           chips: chips || [],
+          isEnabled,
         },
+      });
+    }
+
+    if (action === 'toggle_icebreaker_enabled') {
+      const { enabled } = req.body || {};
+      const { error } = await supabaseAdmin
+        .from('app_settings')
+        .upsert({
+          key: 'icebreaker_enabled',
+          value: !!enabled,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+      return res.status(200).json({
+        ok: true,
+        isEnabled: !!enabled,
+        message: enabled ? 'اتاق نفرت مشترک فعال شد.' : 'اتاق نفرت مشترک غیرفعال شد.',
       });
     }
 

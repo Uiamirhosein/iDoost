@@ -55,6 +55,7 @@ import {
   processReferralAttribution,
   respondToMatch,
   subscribeToMatchConfirmation,
+  isIcebreakerEnabledGlobally,
 } from './lib/supabase';
 
 export default function App() {
@@ -396,8 +397,13 @@ export default function App() {
     setActiveChatUser(partner);
     setIsChatMinimized(false);
 
-    // Trigger Shared Hate Icebreaker Modal ONLY when mutual match succeeds
-    setShowIcebreaker(true);
+    // Trigger Shared Hate Icebreaker Modal ONLY if globally enabled in admin settings
+    const enabled = await isIcebreakerEnabledGlobally();
+    if (enabled) {
+      setShowIcebreaker(true);
+    } else {
+      setShowIcebreaker(false);
+    }
 
     // 1. Fetch existing messages from Supabase
     const existing = await fetchSessionMessages(sessionId, currentUser.id);

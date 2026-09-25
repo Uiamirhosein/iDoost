@@ -776,6 +776,27 @@ export async function unblockUser(userId: string, targetUserId: string): Promise
 }
 
 /**
+ * Check if Icebreaker feature is enabled globally by admin
+ */
+export async function isIcebreakerEnabledGlobally(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'icebreaker_enabled')
+      .single();
+
+    if (error || !data) {
+      return true; // default enabled
+    }
+
+    return data.value === true || data.value === 'true';
+  } catch (err) {
+    return true;
+  }
+}
+
+/**
  * Fetches active icebreaker chip suggestions from Supabase
  */
 export async function fetchIcebreakerChipSuggestions(): Promise<{

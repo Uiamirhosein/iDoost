@@ -52,6 +52,7 @@ export const AdminApp: React.FC = () => {
   // Icebreaker Data
   const [icebreakerQuestions, setIcebreakerQuestions] = useState<any[]>([]);
   const [icebreakerChips, setIcebreakerChips] = useState<any[]>([]);
+  const [icebreakerEnabled, setIcebreakerEnabled] = useState<boolean>(true);
   const [icebreakerLoading, setIcebreakerLoading] = useState<boolean>(false);
 
   // Login handler
@@ -111,8 +112,17 @@ export const AdminApp: React.FC = () => {
     if (res.ok) {
       setIcebreakerQuestions(res.data.questions || []);
       setIcebreakerChips(res.data.chips || []);
+      setIcebreakerEnabled(res.data.isEnabled ?? true);
     }
     setIcebreakerLoading(false);
+  };
+
+  const handleToggleIcebreaker = async (newVal: boolean) => {
+    setIcebreakerEnabled(newVal);
+    const res = await fetchAdminApi('toggle_icebreaker_enabled', 'POST', { enabled: newVal });
+    if (res.ok) {
+      loadIcebreaker();
+    }
   };
 
   // Initial tab loading
@@ -263,8 +273,10 @@ export const AdminApp: React.FC = () => {
             <AdminIcebreaker
               questions={icebreakerQuestions}
               chips={icebreakerChips}
+              isEnabled={icebreakerEnabled}
               loading={icebreakerLoading}
               onRefresh={loadIcebreaker}
+              onToggleEnabled={handleToggleIcebreaker}
             />
           )}
 
